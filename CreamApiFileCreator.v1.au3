@@ -140,7 +140,6 @@ While 1
 								$g_hListView = $aTableData
 								_ArrayDelete($g_hListView, 0)
 								Global $aItem = $g_hListView[0][0]
-								MsgBox(0, "", $aItem)
 								$DLCUrl = 'https://steamdb.info/app/' & $aItem & '/dlc/'
 								__fnDLCGet($DLCUrl)
 ;~ 								GUIDelete($searchForm)
