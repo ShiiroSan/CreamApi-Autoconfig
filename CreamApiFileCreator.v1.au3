@@ -208,7 +208,7 @@ Func exportCreamApi()
 			$newGameDir = FileOpenDialog("Specify folder of steamapi(64).dll", $gameDir, "Steamapi DLL (steam_api.dll;steam_api64.dll)")
 			$isOkFor86DLL = StringRegExp($newGameDir, "steam_api.dll")
 			$isOkFor64DLL = StringRegExp($newGameDir, "steam_api64.dll")
-			If $isOkFor86DLL Or Then
+			If $isOkFor86DLL Then
 				If $isOkFor86DLL Then
 					$bFound = 1
 					$newGameDir = StringRegExpReplace($newGameDir, "steam_api.dll", "")
@@ -237,6 +237,9 @@ Func exportCreamApi()
 		$gameName = $aItem[3]
 		DirCreate($folderSave&"/"&$gameName)
 		$folderSave &= "/"&$gameName
+		FileCopy(@ScriptDir & "\cream_api.ini", $folderSave & "\cream_api.ini")
+		FileCopy(@ScriptDir & "\steam_api.dll", $folderSave & "\steam_api.dll")
+		FileCopy(@ScriptDir & "\steam_api64.dll", $folderSave & "\steam_api64.dll")
 		$creamApiPoint = $folderSave & "\cream_api.ini"
 		
 	EndIf
