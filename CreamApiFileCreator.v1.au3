@@ -26,7 +26,6 @@
 #include <Constants.au3>
 #include <File.au3>
 
-
 Func _StringLikeMath($a, $op, $b)
 	Local $ret
 	If $op = "-" Then
@@ -43,6 +42,7 @@ Func _StringLikeMath($a, $op, $b)
 	Return $ret
 EndFunc   ;==>_StringLikeMath
 
+Global $debug = 0
 
 $baseDirSteam = RegRead("HKCU\Software\Valve\Steam\", "SteamPath")
 $confSteamFile = FileOpen($baseDirSteam & "\config\config.vdf")
@@ -52,13 +52,27 @@ $line9clear = StringRegExpReplace($line9clear, "\\\\", "\\")
 $line9clear = StringRegExpReplace($line9clear, "\""", "")
 $line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
 $defaultGameFolder = $line9clear & "\SteamApps\common\"
-$gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
 
-$guessGameName = _StringLikeMath($gameDir, "-", $defaultGameFolder)
+$gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
+MsgBox(0, "", $gameDir)
+If $gameDir == "" Then
+	$noGame = True
+Else
+	$noGame = False
+EndIf
+If Not $noGame Then
+	$ARRfullDirWGameName=StringSplit($gameDir, "\")
+	$guessGameName = $ARRfullDirWGameName[$ARRfullDirWGameName[0]]
+EndIf
 
 #Region ### START Koda GUI section ### Form=
 Global $searchForm = GUICreate("Game name to search", 311, 105, 277, 191)
-Global $gameName = GUICtrlCreateInput($guessGameName, 8, 8, 297, 28, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
+Global $gameNameInput = ""
+If Not $noGame Then
+	$gameNameInput = GUICtrlCreateInput($guessGameName, 8, 8, 297, 28, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
+Else
+	$gameNameInput = GUICtrlCreateInput("Write name to search here...", 8, 8, 297, 28, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
+EndIf
 GUICtrlSetFont(-1, 12, 400, 0, "Small Fonts")
 GUICtrlSetColor(-1, 0x000000)
 Global $gameSearch = GUICtrlCreateButton("Search for this game!", 8, 40, 297, 57)
@@ -86,12 +100,10 @@ Func __fnDLCGet($DLCUrl) ;**** INTERNAL ONLY ****
 	$qText = _IEBodyReadText($qTest)
 	If Not StringInStr($qText, "DLCs") Then
 		MsgBox(0, "Error!", "The game you looked for does not have DLCs.")
-		_IEQuit($oIE)
 		_IEQuit($qTest)
 		Exit
 	EndIf
 	_IEQuit($qTest)
-	_IEQuit($oIE)
 
 	$THOTTBOT = _INetGetSource($DLCUrl)
 	$String = _StringBetween2($THOTTBOT, '<div class="tab-pane selected" id="dlc">', '</div>')
@@ -99,6 +111,7 @@ Func __fnDLCGet($DLCUrl) ;**** INTERNAL ONLY ****
 	_IEBodyWriteHTML($DLC, $String)
 	Local $DLCTable = _IETableGetCollection($DLC, 0)
 	Global $DLCTableData = _IETableWriteToArray($DLCTable, 1)
+	_IEQuit($DLC)
 	_GUICtrlListView_InsertColumn($DLCListView, 0, $DLCTableData[0][0], 50)
 	_GUICtrlListView_InsertColumn($DLCListView, 1, $DLCTableData[0][1], 350)
 	_GUICtrlListView_AddArray($DLCListView, $DLCTableData)
@@ -115,19 +128,19 @@ While 1
 				Case $GUI_EVENT_CLOSE
 					Exit
 				Case $gameSearch
-					If GUICtrlRead($gameName) = "" Then
+					If GUICtrlRead($gameNameInput) = "" Then
 						MsgBox(0, "Error!", "You must enter a game name before searching!")
 					Else
 ;~ 						TODO: Add a way to show it's currently showing, like loading bar, rotationg mouse or shit like this
-						$oIE = _IECreate("https://steamdb.info/search/?a=app&q=" & GUICtrlRead($gameName) & "&type=1&category=0", 0, 0)
+						$oIE = _IECreate("https://steamdb.info/search/?a=app&q=" & GUICtrlRead($gameNameInput) & "&type=1&category=0", 0, 0)
 						$sText = _IEBodyReadText($oIE)
 						If StringInStr($sText, "Nothing was found matching your request") Then
-							_IEQuit($oIE)
 							MsgBox(0, "Error!", "The game you looked for does not exist.")
-						Else
+						Else ;if game's found
 							Local $oTable = _IETableGetCollection($oIE, 0)
 							Local $aTableData = _IETableWriteToArray($oTable, 1)
 							$uiGameNumber = UBound($aTableData) - 1
+							Local $aItem[4]
 							If $uiGameNumber > 1 Then
 								_GUICtrlListView_InsertColumn($g_hListView, 0, $aTableData[0][0], 75)
 								_GUICtrlListView_InsertColumn($g_hListView, 1, $aTableData[0][1], 75)
@@ -137,15 +150,18 @@ While 1
 								GUISetState(@SW_SHOW, $hGUI)
 								GUIDelete($searchForm)
 							Else
+								$aItem[0] = 3
+								For $i = 1 To 3 Step 1
+									$aItem[$i] = $aTableData[1][$i - 1]
+								Next
 								$g_hListView = $aTableData
 								_ArrayDelete($g_hListView, 0)
-								Global $aItem = $g_hListView[0][0]
-								MsgBox(0, "", $aItem)
-								$DLCUrl = 'https://steamdb.info/app/' & $aItem & '/dlc/'
+								$DLCUrl = 'https://steamdb.info/app/' & $aItem[1] & '/dlc/'
 								__fnDLCGet($DLCUrl)
-;~ 								GUIDelete($searchForm)
+								GUIDelete($searchForm)
 							EndIf
 						EndIf
+						_IEQuit($oIE)
 					EndIf
 			EndSwitch
 		Case $hGUI
@@ -156,7 +172,6 @@ While 1
 					$aItem = _GUICtrlListView_GetItemTextArray($g_hListView)
 					$DLCUrl = 'https://steamdb.info/app/' & $aItem[1] & '/dlc/'
 					__fnDLCGet($DLCUrl)
-					_IEQuit($oIE)
 					GUISetState(@SW_HIDE, $hGUI)
 			EndSwitch
 		Case $DLCGui
@@ -175,15 +190,11 @@ While 1
 						$DLCData[$num][0] = $DLCTableData[$i][0]
 						$DLCData[$num][1] = $DLCTableData[$i][1]
 						$num = $num + 1
-						ConsoleWrite($i & @CR)
 					Next
 					exportCreamApi()
 			EndSwitch
 	EndSwitch
 WEnd
-
-_IEQuit($oIE)
-_IEQuit($DLC)
 
 Func _StringBetween2($s, $from, $to)
 	$x = StringInStr($s, $from) + StringLen($from)
@@ -192,98 +203,85 @@ Func _StringBetween2($s, $from, $to)
 EndFunc   ;==>_StringBetween2
 
 Func exportCreamApi()
-	If FileExists($gameDir & "\steam_api.dll") Or FileExists($gameDir & "\steam_api64.dll") Then
-		
-	Else
-		MsgBox(0, "Error!", "Sorry, steam_api(64).dll can't be found... Will now open a file selection to know where to search for it.")
-		$newGameDir = FileOpenDialog("Specify folder of steamapi(64).dll", $gameDir, "Steamapi DLL (steam_api.dll;steam_api64.dll)")
-		$isOkFor86DLL = StringRegExp($newGameDir, "steam_api.dll")
-		$isOkFor64DLL = StringRegExp($newGameDir, "steam_api64.dll")
-		If $isOkFor86DLL Or Then
+	If $debug Then MsgBox(0, "", "Hey! You're in debug so don't expect it to save the cracked files kiddo")
+	If Not $noGame Then
+		If Not FileExists($gameDir & "\steam_api.dll") Or Not FileExists($gameDir & "\steam_api64.dll") Then
+			MsgBox(0, "Error!", "Sorry, steam_api(64).dll can't be found... Will now open a file selection to know where to search for it.")
+			$newGameDir = FileOpenDialog("Specify folder of steamapi(64).dll", $gameDir, "Steamapi DLL (steam_api.dll;steam_api64.dll)")
+			$isOkFor86DLL = StringRegExp($newGameDir, "steam_api.dll")
+			$isOkFor64DLL = StringRegExp($newGameDir, "steam_api64.dll")
 			If $isOkFor86DLL Then
-				$bFound = 1
-				$newGameDir = StringRegExpReplace($newGameDir, "steam_api.dll", "")
-				$gameDir = $newGameDir
+				$gameRepertory = _StringLikeMath($newGameDir, "-", "steam_api.dll")
+			ElseIf $isOkFor64DLL Then
+				$gameRepertory = _StringLikeMath($newGameDir, "-", "steam_api64.dll")
 			EndIf
-			If $isOkFor64DLL Then
-				$bFound = 1
-				$newGameDir = StringRegExpReplace($newGameDir, "steam_api64.dll", "")
-				$gameDir = $newGameDir
+			$isOkFor86DLL = FileExists($gameRepertory & "steam_api.dll")
+			$isOkFor64DLL = FileExists($gameRepertory & "steam_api64.dll")
+			If $isOkFor86DLL or $isOkFor64DLL Then $gameDir = $gameRepertory
+		EndIf
+		If Not $debug Then
+			If FileExists($gameDir & "\steam_api_o.dll") == 0 Or FileExists($gameDir & "\steam_api64_o.dll") == 0 Then
+				If FileExists($gameDir & "\steam_api.dll") Then
+					FileMove($gameDir & "\steam_api.dll", $gameDir & "\steam_api_o.dll")
+					FileCopy(@ScriptDir & "\steam_api.dll", $gameDir & "\steam_api.dll")
+				EndIf
+				If FileExists($gameDir & "\steam_api64.dll") Then
+					FileMove($gameDir & "\steam_api64.dll", $gameDir & "\steam_api64_o.dll")
+					FileCopy(@ScriptDir & "\steam_api64.dll", $gameDir & "\steam_api64.dll")
+				EndIf
 			EndIf
+			FileCopy(@ScriptDir & "\cream_api.ini", $gameDir & "\cream_api.ini")
+			$creamApiPoint = $gameDir & "\cream_api.ini"
 		EndIf
-	EndIf
-	If FileExists($gameDir & "\steam_api_o.dll") == 0 Or FileExists($gameDir & "\steam_api64_o.dll") == 0 Then
-		If FileExists($gameDir & "\steam_api.dll") Then
-			FileMove($gameDir & "\steam_api.dll", $gameDir & "\steam_api_o.dll")
-			FileCopy(@ScriptDir & "\steam_api.dll", $gameDir & "\steam_api.dll")
-		ElseIf FileExists(@ScriptDir & "\steam_api64.dll") Then
-			FileMove($gameDir & "\steam_api64.dll", $gameDir & "\steam_api64_o.dll")
-			FileCopy(@ScriptDir & "\steam_api64.dll", $gameDir & "\steam_api64.dll")
-		EndIf
-	EndIf
-	FileCopy(@ScriptDir & "\cream_api.ini", $gameDir & "\cream_api.ini")
-	$creamApiPoint = $gameDir & "\cream_api.ini"
-	If $aItem=="" Then
-		IniWrite($creamApiPoint, "steam", "appid", " " + $aItem[1])
 	Else
-		IniWrite($creamApiPoint, "steam", "appid", " " + $aItem)
-	EndIf
-	IniWrite($creamApiPoint, "steam", "unlockall", " true")
-	IniWrite($creamApiPoint, "steam", "log", " true")
-	$dlcnum = -1
-	For $i = 1 To UBound($DLCData) Step 1
-		If $DLCData[$i][0] <> "" Then
-			$dlcnum = $dlcnum + 1
-			IniWrite($creamApiPoint, "dlc_subscription", $DLCData[$i][0], "true")
-			IniWrite($creamApiPoint, "dlc_index", $dlcnum, $DLCData[$i][0])
-			IniWrite($creamApiPoint, "dlc_names", $dlcnum, $DLCData[$i][1])
-		Else
-			ExitLoop
+		If Not $debug Then
+			$folderSave = FileSelectFolder("Select a folder to save the cracking files", @ScriptDir, 0)
+			$gameName = $aItem[3]
+			DirCreate($folderSave & "/" & $gameName)
+			$folderSave &= "/" & $gameName
+			FileCopy(@ScriptDir & "\cream_api.ini", $folderSave & "\cream_api.ini")
+			FileCopy(@ScriptDir & "\steam_api.dll", $folderSave & "\steam_api.dll")
+			FileCopy(@ScriptDir & "\steam_api64.dll", $folderSave & "\steam_api64.dll")
+			$creamApiPoint = $folderSave & "\cream_api.ini"
 		EndIf
-	Next
-	$dlcnum = 0
+	EndIf
+	If Not $debug Then
+		IniWrite($creamApiPoint, "steam", "appid", " " + $aItem[1])
+		IniWrite($creamApiPoint, "steam", "unlockall", " true")
+		IniWrite($creamApiPoint, "steam", "log", " false") ;If this value is true, near to all game crash so we'll just turn it off :D
+		$dlcnum = -1
+		For $i = 1 To UBound($DLCData) Step 1
+			If $DLCData[$i][0] <> "" Then
+				$dlcnum = $dlcnum + 1
+				IniWrite($creamApiPoint, "dlc_subscription", $DLCData[$i][0], "true")
+				IniWrite($creamApiPoint, "dlc_index", $dlcnum, $DLCData[$i][0])
+				IniWrite($creamApiPoint, "dlc_names", $dlcnum, $DLCData[$i][1])
+			Else
+				ExitLoop
+			EndIf
+		Next
+		$dlcnum = 0
 
-	; From here the next 13 lines are code to correct some spacing in cream_api.ini
-	Local $sFind = "=  "
-	Local $sReplace = "="
-	Local $sFileName = $creamApiPoint
+		; From here the next 13 lines are code to correct some spacing in cream_api.ini
+		Local $sFind = "=  "
+		Local $sReplace = "="
+		Local $sFileName = $creamApiPoint
 
-	Local $iRetval = _ReplaceStringInFile($sFileName, $sFind, $sReplace)
-	$iMsg = FileRead($sFileName, 1000)
+		Local $iRetval = _ReplaceStringInFile($sFileName, $sFind, $sReplace)
+		$iMsg = FileRead($sFileName, 1000)
 
-	Local $sFind = ";   "
-	Local $sReplace = "; "
-	Local $sFileName = $creamApiPoint
+		Local $sFind = ";   "
+		Local $sReplace = "; "
+		Local $sFileName = $creamApiPoint
 
-	Local $iRetval = _ReplaceStringInFile($sFileName, $sFind, $sReplace)
-	$iMsg = FileRead($sFileName, 1000)
+		Local $iRetval = _ReplaceStringInFile($sFileName, $sFind, $sReplace)
+		$iMsg = FileRead($sFileName, 1000)
 
-	WinKill($DLCGui)
+		WinKill($DLCGui)
+	EndIf
 	MsgBox(0, "Done!", "cream_api.ini is done." & @CR _
 			 & "Made by ShiiroSan & Anomaly for cs.rin.ru communities. Thanks to deadmau5 for CreamAPI.")
 EndFunc   ;==>exportCreamApi
-
-Func exportSteamAppID()
-	FileWriteLine("steam_appid.ini", "[Steam]")
-	FileWriteLine("steam_appid.ini", "RealAppId=" & $aItem[1])
-	FileWriteLine("steam_appid.ini", "#Generated with ShiiroSan Exporter DLC List")
-	FileWriteLine("steam_appid.ini", "#Thanks to https://steamdb.info ; http://revolt.loginto.me ; cs.rin.ru community. ")
-	FileWriteLine("steam_appid.ini", "")
-	For $i = 1 To UBound($DLCData) Step 1
-		If $DLCData[$i][0] <> "" Then
-			$dlcnum = $dlcnum + 1
-			FileWriteLine("steam_appid.ini", "#" & $DLCData[$i][1])
-			If $i < 10 Then
-				FileWriteLine("steam_appid.ini", "DLC00" & $dlcnum & "=" & $DLCData[$i][0])
-			Else
-				FileWriteLine("steam_appid.ini", "DLC0" & $dlcnum & "=" & $DLCData[$i][0])
-			EndIf
-		Else
-			ExitLoop
-		EndIf
-	Next
-	FileWriteLine("steam_appid.ini", "[Settings]")
-EndFunc   ;==>exportSteamAppID
 
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: _FindInFile
