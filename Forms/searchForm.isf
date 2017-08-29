@@ -1,0 +1,106 @@
+; -- Created with ISN Form Studio 2 for ISN AutoIt Studio -- ;
+#include <StaticConstants.au3>
+#include <GUIConstantsEx.au3>
+#include <WindowsConstants.au3>
+#Include <GuiButton.au3>
+#include <EditConstants.au3>
+
+Global $searchForm = GUICreate("Game name to search",311,105,-1,-1,-1,-1)
+Global $gameNameInput = GUICtrlCreateInput("Write name to search here...",8,8,297,28,$ES_CENTER,$WS_EX_CLIENTEDGE)
+GUICtrlSetFont(-1,12,400,0,"Small Fonts")
+Global $gameSearch = GUICtrlCreateButton("Search for this game!",8,40,297,57,-1,-1)
+
+
+
+#cs
+[gui]
+Handle_deklaration=default
+Handle_deklaration_const=false
+title=Game name to search
+breite=311
+hoehe=105
+style=-1
+exstyle=-1
+bgcolour=0xF0F0F0
+bgimage=none
+handle=searchForm
+parent=
+code=
+codebeforegui=
+xpos=-1
+ypos=-1
+center_gui=true
+title_textmode=normal
+isf_include_once=false
+only_controls_in_isf=false
+const_modus=default
+gui_event_close=
+gui_event_minimize=
+gui_event_restore=
+gui_event_maximize=
+gui_event_mousemove=
+gui_event_primarydown=
+gui_event_primaryup=
+gui_event_secoundarydown=
+gui_event_secoundaryup=
+gui_event_resized=
+gui_event_dropped=
+[0x000527B0]
+handle=407
+locked=0
+resize=
+code=
+type=button
+x=8
+y=40
+width=297
+height=57
+text=Search for this game!
+tooltip=
+state=$GUI_SHOW+$GUI_ENABLE
+style=
+exstyle=
+textcolour=0x000000
+bgcolour=
+font=MS Sans Serif
+fontsize=8
+fontstyle=400
+fontattribute=0
+id=gameSearch
+func=
+bgimage=
+order=2
+tabpage=-1
+iconindex=
+textmode=text
+[tab]
+code=; -- Created with ISN Form Studio 2 for ISN AutoIt Studio -- ;[BREAK]#include <StaticConstants.au3>[BREAK]#include <GUIConstantsEx.au3>[BREAK]#include <WindowsConstants.au3>[BREAK]#Include <GuiButton.au3>[BREAK]#include <EditConstants.au3>[BREAK][BREAK]Global $searchForm = GUICreate("Game name to search",311,105,-1,-1,-1,-1)[BREAK]Global $gameNameInput = GUICtrlCreateInput("Write name to search here...",8,8,297,28,$ES_CENTER,$WS_EX_CLIENTEDGE)[BREAK]GUICtrlSetFont(-1,12,400,0,"Small Fonts")[BREAK]Global $gameSearch = GUICtrlCreateButton("Search for this game!",8,40,297,57,-1,-1)[BREAK]GUISetState(@SW_SHOW,$searchForm)[BREAK][BREAK][BREAK]While 1[BREAK]	$nMsg = GUIGetMsg()[BREAK]	Switch $nMsg[BREAK]		Case $GUI_EVENT_CLOSE[BREAK]			Exit[BREAK][BREAK]	EndSwitch[BREAK]WEnd[BREAK]
+[0x000F2754]
+handle=406
+locked=0
+resize=
+code=
+type=input
+x=8
+y=8
+width=297
+height=28
+text=Write name to search here...
+tooltip=
+state=$GUI_SHOW+$GUI_ENABLE
+style=$ES_CENTER
+exstyle=$WS_EX_CLIENTEDGE
+textcolour=0x000000
+bgcolour=
+font=Small Fonts
+fontsize=12
+fontstyle=400
+fontattribute=0
+id=gameNameInput
+func=
+bgimage=
+order=2
+tabpage=-1
+iconindex=
+textmode=text
+#ce

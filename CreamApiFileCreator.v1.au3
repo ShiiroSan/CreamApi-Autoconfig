@@ -5,14 +5,13 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=Automatically create files for CreamAPI made by deadmau5. This program is made by Shiirosan & Anomaly, it is open-source and free for use. If you paid for this, well... you got fucked.
 #AutoIt3Wrapper_Res_Description=Automatically make ini files for CreamAPI, as well as importing the .dll file.
-#AutoIt3Wrapper_Res_Fileversion=3.0.0.4
-#AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
+#AutoIt3Wrapper_Res_Fileversion=2.0
+#AutoIt3Wrapper_Res_Fileversion_AutoIncrement=p
 #AutoIt3Wrapper_Res_LegalCopyright=deadmau5 for CreamAPI
 #AutoIt3Wrapper_Res_Language=1033
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <Array.au3>
 #include <IE.au3>
-;~ #include "IEModShiiro.au3"
 #include <GUIConstantsEx.au3>
 #include <GuiImageList.au3>
 #include <GuiListView.au3>
@@ -25,6 +24,7 @@
 #include <MsgBoxConstants.au3>
 #include <Constants.au3>
 #include <File.au3>
+#include "Forms\searchForm.isf"
 
 Func _StringLikeMath($a, $op, $b)
 	Local $ret
@@ -54,7 +54,6 @@ $line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
 $defaultGameFolder = $line9clear & "\SteamApps\common\"
 
 $gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
-MsgBox(0, "", $gameDir)
 If $gameDir == "" Then
 	$noGame = True
 Else
@@ -65,19 +64,13 @@ If Not $noGame Then
 	$guessGameName = $ARRfullDirWGameName[$ARRfullDirWGameName[0]]
 EndIf
 
-#Region ### START Koda GUI section ### Form=
-Global $searchForm = GUICreate("Game name to search", 311, 105, 277, 191)
-Global $gameNameInput = ""
+#Region ### START Koda GUI section ### Form=$searchForm
 If Not $noGame Then
-	$gameNameInput = GUICtrlCreateInput($guessGameName, 8, 8, 297, 28, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
+	GUICtrlSetData($gameNameInput, $guessGameName)
 Else
-	$gameNameInput = GUICtrlCreateInput("Write name to search here...", 8, 8, 297, 28, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
+	;Nothing to do otherwise idiot.
 EndIf
-GUICtrlSetFont(-1, 12, 400, 0, "Small Fonts")
-GUICtrlSetColor(-1, 0x000000)
-Global $gameSearch = GUICtrlCreateButton("Search for this game!", 8, 40, 297, 57)
-GUICtrlSetState(-1, 512)
-GUISetState(@SW_SHOW)
+GUISetState(@SW_SHOW,$searchForm)
 #EndRegion ### END Koda GUI section ###
 
 Local $hGUI, $hImage
@@ -92,6 +85,10 @@ $DLCGui = GUICreate("DLC List for selected games", 450, 400)
 $hButtonMaker = GUICtrlCreateButton("Make DLC list export", 4, 275, 150, 75)
 $DLCListView = _GUICtrlListView_Create($DLCGui, "", 2, 2, 446, 268)
 _GUICtrlListView_SetExtendedListViewStyle($DLCListView, BitOR($LVS_EX_GRIDLINES, $LVS_EX_FULLROWSELECT))
+$DLCCheckLang=GUICtrlCreateCheckbox("Set languages manually",230,290,150,21,-1,-1)
+$DLCComboLang=GUICtrlCreateCombo("Languages",230,320,150,21,-1,-1)
+GUICtrlSetData(-1,"French|English|Chinese|German|Spanish|Italian")
+GUICtrlSetState(-1, $GUI_DISABLE)
 GUISetState(@SW_HIDE)
 $DLC = ""
 $oIE = 0
@@ -175,6 +172,11 @@ While 1
 					GUISetState(@SW_HIDE, $hGUI)
 			EndSwitch
 		Case $DLCGui
+			If _IsChecked($DLCCheckLang) Then 
+				GUICtrlSetState($DLCComboLang, $GUI_ENABLE)
+			Else
+				GUICtrlSetState($DLCComboLang, $GUI_DISABLE)
+			EndIf
 			Switch $nMsg[0]
 				Case $GUI_EVENT_CLOSE
 					GUIDelete($DLCGui)
@@ -324,3 +326,6 @@ Func _FindInFile($sSearch, $sFilePath, $sMask = '*', $fRecursive = True, $fLiter
 	Return StringSplit(StringStripWS(StringStripCR($sOutput), BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING)), @LF)
 EndFunc   ;==>_FindInFile
 
+Func _IsChecked(Const $iControlID)
+    Return BitAND(GUICtrlRead($iControlID), $GUI_CHECKED) = $GUI_CHECKED
+EndFunc   ;==>_IsChecked
