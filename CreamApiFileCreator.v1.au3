@@ -24,7 +24,7 @@
 #include <MsgBoxConstants.au3>
 #include <Constants.au3>
 #include <File.au3>
-#include "Forms\searchForm.isf"
+#include "CreamApiConfigurator.isf"
 
 Func _StringLikeMath($a, $op, $b)
 	Local $ret
@@ -255,9 +255,12 @@ Func exportCreamApi()
 		For $i = 1 To UBound($DLCData) Step 1
 			If $DLCData[$i][0] <> "" Then
 				$dlcnum = $dlcnum + 1
-				IniWrite($creamApiPoint, "dlc_subscription", $DLCData[$i][0], "true")
-				IniWrite($creamApiPoint, "dlc_index", $dlcnum, $DLCData[$i][0])
-				IniWrite($creamApiPoint, "dlc_names", $dlcnum, $DLCData[$i][1])
+				IniWrite($creamApiPoint, "dlc", $DLCData[$i][0], $DLCData[$i][1])
+				
+				;/* To be removed */
+				
+				;IniWrite($creamApiPoint, "dlc_index", $dlcnum, $DLCData[$i][0])
+				;IniWrite($creamApiPoint, "dlc_names", $dlcnum, $DLCData[$i][1])
 			Else
 				ExitLoop
 			EndIf
