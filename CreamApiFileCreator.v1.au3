@@ -5,10 +5,12 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=Automatically create files for CreamAPI made by deadmau5. This program is made by Shiirosan & Anomaly, it is open-source and free for use. If you paid for this, well... you got fucked.
 #AutoIt3Wrapper_Res_Description=Automatically make ini files for CreamAPI, as well as importing the .dll file.
-#AutoIt3Wrapper_Res_Fileversion=2.0
+#AutoIt3Wrapper_Res_Fileversion=3.0
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=p
 #AutoIt3Wrapper_Res_LegalCopyright=deadmau5 for CreamAPI
 #AutoIt3Wrapper_Res_Language=1033
+#AutoIt3Wrapper_Run_Tidy=y
+#AutoIt3Wrapper_Run_Au3Stripper=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <Array.au3>
 #include <IE.au3>
@@ -24,7 +26,11 @@
 #include <MsgBoxConstants.au3>
 #include <Constants.au3>
 #include <File.au3>
-#include "CreamApiConfigurator.isf"
+
+#Region GUI Includes
+#include "Forms/CreamApiConfigurator.isf"
+#include "Forms/searchForm.isf"
+#EndRegion
 
 Func _StringLikeMath($a, $op, $b)
 	Local $ret
@@ -44,6 +50,41 @@ EndFunc   ;==>_StringLikeMath
 
 Global $debug = 0
 
+If FileExists("caconfig.ini") Then
+	$language = IniRead("caconfig.ini","default","language","English")
+	$useOffline = IniRead("caconfig.ini","default","offlineMode",False)
+	$extraProtectionBypass = IniRead("caconfig.ini","default","extraProtectionBypass",False)
+Else
+	
+EndIf
+
+GUISetState(@SW_SHOW,$CreamApiConfigurator)
+
+While 1
+	$nMsg = GUIGetMsg()
+	Switch $nMsg
+		Case $GUI_EVENT_CLOSE
+			_ConfirmClose()
+		Case $cancelConfBtn
+			_ConfirmClose()
+		Case $setDefaultBtn
+			$setDefault = MsgBox(266273,"Are you sure?","By setting this as default you'll never see this windows again and the option above will be use each time you make a patch. " & @CRLF & "You can always remove the default options by deleting caconfig.ini on [working dir].",0)
+			switch $setDefault
+				case 1 ;OK
+				IniWrite("caconfig.ini","default","language",GUICtrlRead($languageCombo))
+				IniWrite("caconfig.ini","default","extraProtectionBypass",_IsChecked($extraProtecBypassCheckbox))
+				IniWrite("caconfig.ini","default","$offlineMode",_IsChecked($offlineCheckbox))
+				IniWrite("caconfig.ini","default","userdataFolder",_IsChecked($userdataFolderCheckxox))
+				IniWrite("caconfig.ini","default","lowviolence",_IsChecked($lowviolenceCheckbox))
+				IniWrite("caconfig.ini","default","$wrapperMode",_IsChecked($wrapperCheckbox))
+				case 2 ;CANCEL
+				;nothing to do folk
+			endswitch
+		
+	EndSwitch
+WEnd
+
+
 $baseDirSteam = RegRead("HKCU\Software\Valve\Steam\", "SteamPath")
 $confSteamFile = FileOpen($baseDirSteam & "\config\config.vdf")
 $confFileRead = FileRead($confSteamFile)
@@ -54,13 +95,14 @@ $line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
 $defaultGameFolder = $line9clear & "\SteamApps\common\"
 
 $gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
+
 If $gameDir == "" Then
 	$noGame = True
 Else
 	$noGame = False
 EndIf
 If Not $noGame Then
-	$ARRfullDirWGameName=StringSplit($gameDir, "\")
+	$ARRfullDirWGameName = StringSplit($gameDir, "\")
 	$guessGameName = $ARRfullDirWGameName[$ARRfullDirWGameName[0]]
 EndIf
 
@@ -70,7 +112,7 @@ If Not $noGame Then
 Else
 	;Nothing to do otherwise idiot.
 EndIf
-GUISetState(@SW_SHOW,$searchForm)
+GUISetState(@SW_SHOW, $searchForm)
 #EndRegion ### END Koda GUI section ###
 
 Local $hGUI, $hImage
@@ -85,13 +127,15 @@ $DLCGui = GUICreate("DLC List for selected games", 450, 400)
 $hButtonMaker = GUICtrlCreateButton("Make DLC list export", 4, 275, 150, 75)
 $DLCListView = _GUICtrlListView_Create($DLCGui, "", 2, 2, 446, 268)
 _GUICtrlListView_SetExtendedListViewStyle($DLCListView, BitOR($LVS_EX_GRIDLINES, $LVS_EX_FULLROWSELECT))
-$DLCCheckLang=GUICtrlCreateCheckbox("Set languages manually",230,290,150,21,-1,-1)
-$DLCComboLang=GUICtrlCreateCombo("Languages",230,320,150,21,-1,-1)
-GUICtrlSetData(-1,"French|English|Chinese|German|Spanish|Italian")
+$DLCCheckLang = GUICtrlCreateCheckbox("Set languages manually", 230, 290, 150, 21, -1, -1)
+$DLCComboLang = GUICtrlCreateCombo("Languages", 230, 320, 150, 21, -1, -1)
+GUICtrlSetData(-1, "French|English|Chinese|German|Spanish|Italian")
 GUICtrlSetState(-1, $GUI_DISABLE)
 GUISetState(@SW_HIDE)
+
 $DLC = ""
 $oIE = 0
+
 Func __fnDLCGet($DLCUrl) ;**** INTERNAL ONLY ****
 	$qTest = _IECreate($DLCUrl, 0, 0)
 	$qText = _IEBodyReadText($qTest)
@@ -117,6 +161,7 @@ Func __fnDLCGet($DLCUrl) ;**** INTERNAL ONLY ****
 EndFunc   ;==>__fnDLCGet
 
 $Exit = 0
+
 While 1
 	$nMsg = GUIGetMsg(1)
 	Switch $nMsg[1]
@@ -129,7 +174,7 @@ While 1
 						MsgBox(0, "Error!", "You must enter a game name before searching!")
 					Else
 ;~ 						TODO: Add a way to show it's currently showing, like loading bar, rotationg mouse or shit like this
-						$oIE = _IECreate("https://steamdb.info/search/?a=app&q=" & GUICtrlRead($gameNameInput) & "&type=1&category=0", 0, 0)
+						$oIE = _IECreate("https://steamdb.info/search/?a=app&q=" & GUICtrlRead($gameNameInput), 0, 0)
 						$sText = _IEBodyReadText($oIE)
 						If StringInStr($sText, "Nothing was found matching your request") Then
 							MsgBox(0, "Error!", "The game you looked for does not exist.")
@@ -138,7 +183,16 @@ While 1
 							Local $aTableData = _IETableWriteToArray($oTable, 1)
 							$uiGameNumber = UBound($aTableData) - 1
 							Local $aItem[4]
-							If $uiGameNumber > 1 Then
+							If $uiGameNumber > 1 Then ;more than 1 game is found
+								local $posToDelete
+								Local $iToDel=0
+								For $i = 1 To UBound($aTableData,1) - 1 Step 1 ;this whole part is needed to get only game on multi-game search
+									If $aTableData[$i][1] <> "Game" Then
+										$iToDel+=1
+										If $iToDel > 1 Then $posToDelete = $posToDelete & ";"
+										$posToDelete = $posToDelete & $i
+									EndIf
+								Next
 								_GUICtrlListView_InsertColumn($g_hListView, 0, $aTableData[0][0], 75)
 								_GUICtrlListView_InsertColumn($g_hListView, 1, $aTableData[0][1], 75)
 								_GUICtrlListView_InsertColumn($g_hListView, 2, $aTableData[0][2], 200)
@@ -146,7 +200,7 @@ While 1
 								_GUICtrlListView_DeleteItem($g_hListView, 0)
 								GUISetState(@SW_SHOW, $hGUI)
 								GUIDelete($searchForm)
-							Else
+							Else ;only one game is found
 								$aItem[0] = 3
 								For $i = 1 To 3 Step 1
 									$aItem[$i] = $aTableData[1][$i - 1]
@@ -172,7 +226,7 @@ While 1
 					GUISetState(@SW_HIDE, $hGUI)
 			EndSwitch
 		Case $DLCGui
-			If _IsChecked($DLCCheckLang) Then 
+			If _IsChecked($DLCCheckLang) Then
 				GUICtrlSetState($DLCComboLang, $GUI_ENABLE)
 			Else
 				GUICtrlSetState($DLCComboLang, $GUI_DISABLE)
@@ -219,7 +273,7 @@ Func exportCreamApi()
 			EndIf
 			$isOkFor86DLL = FileExists($gameRepertory & "steam_api.dll")
 			$isOkFor64DLL = FileExists($gameRepertory & "steam_api64.dll")
-			If $isOkFor86DLL or $isOkFor64DLL Then $gameDir = $gameRepertory
+			If $isOkFor86DLL Or $isOkFor64DLL Then $gameDir = $gameRepertory
 		EndIf
 		If Not $debug Then
 			If FileExists($gameDir & "\steam_api_o.dll") == 0 Or FileExists($gameDir & "\steam_api64_o.dll") == 0 Then
@@ -330,5 +384,18 @@ Func _FindInFile($sSearch, $sFilePath, $sMask = '*', $fRecursive = True, $fLiter
 EndFunc   ;==>_FindInFile
 
 Func _IsChecked(Const $iControlID)
-    Return BitAND(GUICtrlRead($iControlID), $GUI_CHECKED) = $GUI_CHECKED
+	Return BitAND(GUICtrlRead($iControlID), $GUI_CHECKED) = $GUI_CHECKED
 EndFunc   ;==>_IsChecked
+
+Func _ConfirmClose()
+	$wannaClose = MsgBox(266532,"Are you sure?","Are you sure you want to leave?",0)
+	switch $wannaClose
+
+		case 6 ;YES
+			Exit
+
+		case 7 ;NO
+			Return
+
+	endswitch
+EndFunc
