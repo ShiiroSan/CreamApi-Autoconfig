@@ -26,10 +26,13 @@
 #include <MsgBoxConstants.au3>
 #include <Constants.au3>
 #include <File.au3>
+#include <InetConstants.au3>
+#include <WinAPIFiles.au3>
 
 #Region GUI Includes
 #include "Forms/CreamApiConfigurator.isf"
 #include "Forms/searchForm.isf"
+#include "Forms\dlForm.isf"
 #EndRegion
 
 Func _StringLikeMath($a, $op, $b)
@@ -50,17 +53,42 @@ EndFunc   ;==>_StringLikeMath
 
 Global $debug = 0
 
+			GUISetState(@SW_SHOW,$dlForm)
+			Local $DLLink = "http://cs.rin.ru/forum/download/file.php?id=39093" ;Set URL
+			;Local $DLLink = "http://ipv4.download.thinkbroadband.com/512MB.zip" ;Set URL
+			Local $sFilePath = @ScriptDir&"\latest.zip"
+			MsgBox(0,"",$sFilePath)
+			$hInet = InetGet($DLLink, $sFilePath, 19, 1) ;Forces a reload from the remote site and return immediately and download in the background
+			MsgBox(0,"",$hInet)
+			$FileSize = InetGetSize($DLLink) ;Get file size
+			MsgBox(0,"",InetGetInfo($hInet,2))
+			Sleep(200)
+			While Not InetGetInfo($hInet, 2) ;Loop until download is finished
+				Sleep(250) ;Sleep for half a second to avoid flicker in the progress bar
+				$BytesReceived = InetGetInfo($hInet, 0) ;Get bytes received
+				GUICtrlSetData($labelSize, $BytesReceived & " / " & $FileSize)
+				$Pct = Int($BytesReceived / $FileSize * 100) ;Calculate percentage
+				GUICtrlSetData($labelPercent, $Pct & "%")
+				GUICtrlSetData($dlProgress, $Pct) ;Set progress bar
+			WEnd
+			MsgBox(0,"","Dl done")
+Exit
+getCreamApiVersion()
+Exit
+
 If FileExists("caconfig.ini") Then
 	$language = IniRead("caconfig.ini","default","language","English")
-	$useOffline = IniRead("caconfig.ini","default","offlineMode",False)
 	$extraProtectionBypass = IniRead("caconfig.ini","default","extraProtectionBypass",False)
+	$useOffline = IniRead("caconfig.ini","default","offlineMode",False)
+	$userdataFolder = IniRead("caconfig.ini","default","userdataFolder",False)
+	$lowviolence = IniRead("caconfig.ini","default","lowviolence",False)
+	$wrapperMode = IniRead("caconfig.ini","default","$wrapperMode",False)
+	$configuratorShow = 0
 Else
-	
+	GUISetState(@SW_SHOW,$CreamApiConfigurator)
+	$configuratorShow = 1
 EndIf
-
-GUISetState(@SW_SHOW,$CreamApiConfigurator)
-
-While 1
+While $configuratorShow
 	$nMsg = GUIGetMsg()
 	Switch $nMsg
 		Case $GUI_EVENT_CLOSE
@@ -77,13 +105,29 @@ While 1
 				IniWrite("caconfig.ini","default","userdataFolder",_IsChecked($userdataFolderCheckxox))
 				IniWrite("caconfig.ini","default","lowviolence",_IsChecked($lowviolenceCheckbox))
 				IniWrite("caconfig.ini","default","$wrapperMode",_IsChecked($wrapperCheckbox))
+				$language = GUICtrlRead($languageCombo)
+				$extraProtectionBypass = _IsChecked($extraProtecBypassCheckbox)
+				$useOffline = _IsChecked($offlineCheckbox)
+				$userdataFolder = _IsChecked($userdataFolderCheckxox)
+				$lowviolence = _IsChecked($lowviolenceCheckbox)
+				$wrapperMode = _IsChecked($wrapperCheckbox)
+				GUISetState(@SW_HIDE,$CreamApiConfigurator)
+				$configuratorShow = 0
+				
 				case 2 ;CANCEL
 				;nothing to do folk
 			endswitch
-		
+		Case $validateBtn
+			$language = GUICtrlRead($languageCombo)
+			$extraProtectionBypass = _IsChecked($extraProtecBypassCheckbox)
+			$useOffline = _IsChecked($offlineCheckbox)
+			$userdataFolder = _IsChecked($userdataFolderCheckxox)
+			$lowviolence = _IsChecked($lowviolenceCheckbox)
+			$wrapperMode = _IsChecked($wrapperCheckbox)
+			GUISetState(@SW_HIDE,$CreamApiConfigurator)
+			$configuratorShow = 0
 	EndSwitch
 WEnd
-
 
 $baseDirSteam = RegRead("HKCU\Software\Valve\Steam\", "SteamPath")
 $confSteamFile = FileOpen($baseDirSteam & "\config\config.vdf")
@@ -258,7 +302,7 @@ Func _StringBetween2($s, $from, $to)
 	Return StringMid($s, $x, $y)
 EndFunc   ;==>_StringBetween2
 
-Func exportCreamApi()
+Func exportCreamApi()	
 	If $debug Then MsgBox(0, "", "Hey! You're in debug so don't expect it to save the cracked files kiddo")
 	If Not $noGame Then
 		If Not FileExists($gameDir & "\steam_api.dll") Or Not FileExists($gameDir & "\steam_api64.dll") Then
@@ -301,6 +345,31 @@ Func exportCreamApi()
 			$creamApiPoint = $folderSave & "\cream_api.ini"
 		EndIf
 	EndIf
+	
+	;;;; Writing boolean and language if defined
+	;;;; Tbh will write only if value is different than default. Otherwise we'll let it like that
+	If $language <> "Use default" Then
+		_ReplaceStringInFile($creamApiPoint, ";language", "language")
+		IniWrite($creamApiPoint,"steam","language",$language)
+	EndIf
+	If $extraProtectionBypass <> False Then
+		IniWrite($creamApiPoint,"steam","extraprotection",StringLower($extraProtectionBypass))
+	EndIf
+	If $userdataFolder <> True Then
+		_ReplaceStringInFile($creamApiPoint, ";forceuserdatafolder", "forceuserdatafolder")
+		IniWrite($creamApiPoint,"steam","forceuserdatafolder",StringLower($userdataFolder))
+	EndIf
+	If $lowviolence <> False Then
+		_ReplaceStringInFile($creamApiPoint, ";lowviolence", "lowviolence")
+		IniWrite($creamApiPoint,"steam","lowviolence",StringLower($lowviolence))
+	EndIf
+	If $useOffline <> False Then
+		IniWrite($creamApiPoint,"steam","forceoffline",StringLower($useOffline))
+	EndIf
+	If $wrapperMode <> False Then
+		IniWrite($creamApiPoint,"steam","wrappermode",StringLower($wrapperMode))
+	EndIf
+	
 	If Not $debug Then
 		IniWrite($creamApiPoint, "steam", "appid", " " + $aItem[1])
 		IniWrite($creamApiPoint, "steam", "unlockall", " true")
@@ -341,6 +410,61 @@ Func exportCreamApi()
 	MsgBox(0, "Done!", "cream_api.ini is done." & @CR _
 			 & "Made by ShiiroSan & Anomaly for cs.rin.ru communities. Thanks to deadmau5 for CreamAPI.")
 EndFunc   ;==>exportCreamApi
+
+Func firstRun()
+	Local $creamApiVersion = getCreamApiVersion()
+	InetGet("https://www.shiirosan.com/caversion",@AppDataDir&"/supportedVersionCA")
+	Local $supportedVersion = FileRead(@AppDataDir&"/supportedVersionCA")
+	If $creamApiVersion <> $supportedVersion Then
+		If $creamApiVersion > $supportedVersion Then
+			$needToUp = MsgBox(68,"Info","The new version isn't officially supported for the moment." & @CRLF & "You might report it to ShiiroSan on cs.rin.ru, or wait a few days." & @CRLF & "" & @CRLF & "However, we could always try to use the new version with old parameter [CAN BE VERY UNSTABLE AND BREAK YOUR GAME]. " & @CRLF & "Do you want to try?",0)
+			switch $needToUp
+				case 6 ;YES
+					
+				case 7 ;NO
+					
+			endswitch
+		EndIf
+	EndIf
+EndFunc
+
+Func getCreamApiVersion()
+	;;; Download cs.rin.ru page and read if version is the same.
+	$csrinruPage=_IECreate("https://cs.rin.ru/forum/viewtopic.php?f=29&t=70576",0,0,1)
+	$csrinruText=_IEBodyReadHTML($csrinruPage)
+	$versionOnRinRu=_StringBetween2($csrinruText,'"> <div style="display: none;">',':<br><br>')
+	return $versionOnRinRu
+EndFunc
+
+Func checkVersion()
+	Local $creamApiVersion=getCreamApiVersion()
+	Local $installedVersion=FileRead("version.txt")
+	If FileExists(@ScriptDir&"\"&$creamApiVersion) Then
+		Return True
+	Else
+		Local $needToUp = MsgBox(36,"Need to update","A new version might be available, would you like to update it? " & @CRLF & "Actual version found: " & $installedVersion & @CRLF & "New version found: " & $creamApiVersion,0)
+		switch $needToUp
+			case 6 ;YES
+			$DLLink = "https://cs.rin.ru/forum/download/file.php?id=39093"
+			GUISetState(@SW_SHOW,$dlForm)
+			
+			;$url= "http://fuller.zen.co.uk/test/100MB_nonzero.bin" ;Set URL
+			$folder = @TempDir & "\downloads\latest.7z" ;Set folder
+			$hInet = InetGet($DLLink, $folder, 1, 1) ;Forces a reload from the remote site and return immediately and download in the background
+			$FileSize = InetGetSize($DLLink) ;Get file size
+			While Not InetGetInfo($hInet, 2) ;Loop until download is finished
+				Sleep(250) ;Sleep for half a second to avoid flicker in the progress bar
+				$BytesReceived = InetGetInfo($hInet, 0) ;Get bytes received
+				GUICtrlSetData($labelSize, $BytesReceived & " / " & $FileSize)
+				$Pct = Int($BytesReceived / $FileSize * 100) ;Calculate percentage
+				GUICtrlSetData($labelPercent, $Pct & "%")
+				GUICtrlSetData($dlProgress, $Pct) ;Set progress bar
+			WEnd
+			case 7 ;NO
+			;Your code here...
+		endswitch
+	EndIf
+EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: _FindInFile
