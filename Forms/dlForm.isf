@@ -5,7 +5,7 @@
 #Include <GuiButton.au3>
 #include <ProgressConstants.au3>
 
-$dlForm = GUICreate("dlForm",360,460,-1,-1,$WS_POPUP,-1)
+$dlForm = GUICreate("dlForm",360,138,-1,-1,$WS_POPUP,-1)
 $dlProgress = GUICtrlCreateProgress(20,40,320,20,-1,-1)
 $labelSize = GUICtrlCreateLabel("",20,82,320,15,$SS_CENTER,-1)
 GUICtrlSetBkColor(-1,"-2")
@@ -23,7 +23,7 @@ Handle_deklaration=default
 Handle_deklaration_const=false
 title=dlForm
 breite=360
-hoehe=460
+hoehe=138
 style=$WS_POPUP
 exstyle=-1
 bgcolour=0xF0F0F0
@@ -50,7 +50,7 @@ gui_event_secoundarydown=
 gui_event_secoundaryup=
 gui_event_resized=
 gui_event_dropped=
-[0x001A1B7E]
+[0x00122DC0]
 handle=371
 locked=0
 resize=
@@ -78,7 +78,7 @@ order=0
 tabpage=-1
 iconindex=
 textmode=text
-[0x00162252]
+[0x00142D62]
 handle=372
 locked=0
 resize=
@@ -106,7 +106,7 @@ order=2
 tabpage=-1
 iconindex=
 textmode=text
-[0x00171FAE]
+[0x00163180]
 handle=373
 locked=0
 resize=
@@ -134,7 +134,7 @@ order=3
 tabpage=-1
 iconindex=
 textmode=text
-[0x01650A20]
+[0x000B2DE4]
 handle=374
 locked=0
 resize=

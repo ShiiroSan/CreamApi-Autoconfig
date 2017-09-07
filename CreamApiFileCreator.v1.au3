@@ -29,6 +29,8 @@
 #include <InetConstants.au3>
 #include <WinAPIFiles.au3>
 
+#include <WinHttp.au3>
+
 #Region GUI Includes
 #include "Forms/CreamApiConfigurator.isf"
 #include "Forms/searchForm.isf"
@@ -53,6 +55,7 @@ EndFunc   ;==>_StringLikeMath
 
 Global $debug = 0
 
+updateCA()
 			GUISetState(@SW_SHOW,$dlForm)
 			Local $DLLink = "http://cs.rin.ru/forum/download/file.php?id=39093" ;Set URL
 			;Local $DLLink = "http://ipv4.download.thinkbroadband.com/512MB.zip" ;Set URL
@@ -129,6 +132,7 @@ While $configuratorShow
 	EndSwitch
 WEnd
 
+#Region ### Get Steam Path ###
 $baseDirSteam = RegRead("HKCU\Software\Valve\Steam\", "SteamPath")
 $confSteamFile = FileOpen($baseDirSteam & "\config\config.vdf")
 $confFileRead = FileRead($confSteamFile)
@@ -137,8 +141,8 @@ $line9clear = StringRegExpReplace($line9clear, "\\\\", "\\")
 $line9clear = StringRegExpReplace($line9clear, "\""", "")
 $line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
 $defaultGameFolder = $line9clear & "\SteamApps\common\"
-
 $gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
+#EndRegion
 
 If $gameDir == "" Then
 	$noGame = True
@@ -159,13 +163,16 @@ EndIf
 GUISetState(@SW_SHOW, $searchForm)
 #EndRegion ### END Koda GUI section ###
 
+#Region ### START Koda GUI section ### Form=gameList
 Local $hGUI, $hImage
 $hGUI = GUICreate("Game list", 400, 400)
 $hButtonSelect = GUICtrlCreateButton("Get DLC for selected AppID", 4, 275, 150, 75)
 $g_hListView = _GUICtrlListView_Create($hGUI, "", 2, 2, 394, 268)
 _GUICtrlListView_SetExtendedListViewStyle($g_hListView, BitOR($LVS_EX_GRIDLINES, $LVS_EX_FULLROWSELECT))
 GUISetState(@SW_HIDE)
+#EndRegion ### END Koda GUI section ###
 
+#Region ### START Koda GUI section ### Form=DLCList
 Local $DLCGui
 $DLCGui = GUICreate("DLC List for selected games", 450, 400)
 $hButtonMaker = GUICtrlCreateButton("Make DLC list export", 4, 275, 150, 75)
@@ -176,6 +183,7 @@ $DLCComboLang = GUICtrlCreateCombo("Languages", 230, 320, 150, 21, -1, -1)
 GUICtrlSetData(-1, "French|English|Chinese|German|Spanish|Italian")
 GUICtrlSetState(-1, $GUI_DISABLE)
 GUISetState(@SW_HIDE)
+#EndRegion ### END Koda GUI section ###
 
 $DLC = ""
 $oIE = 0
@@ -445,27 +453,62 @@ Func checkVersion()
 		Local $needToUp = MsgBox(36,"Need to update","A new version might be available, would you like to update it? " & @CRLF & "Actual version found: " & $installedVersion & @CRLF & "New version found: " & $creamApiVersion,0)
 		switch $needToUp
 			case 6 ;YES
-			$DLLink = "https://cs.rin.ru/forum/download/file.php?id=39093"
-			GUISetState(@SW_SHOW,$dlForm)
-			
-			;$url= "http://fuller.zen.co.uk/test/100MB_nonzero.bin" ;Set URL
-			$folder = @TempDir & "\downloads\latest.7z" ;Set folder
-			$hInet = InetGet($DLLink, $folder, 1, 1) ;Forces a reload from the remote site and return immediately and download in the background
-			$FileSize = InetGetSize($DLLink) ;Get file size
-			While Not InetGetInfo($hInet, 2) ;Loop until download is finished
-				Sleep(250) ;Sleep for half a second to avoid flicker in the progress bar
-				$BytesReceived = InetGetInfo($hInet, 0) ;Get bytes received
-				GUICtrlSetData($labelSize, $BytesReceived & " / " & $FileSize)
-				$Pct = Int($BytesReceived / $FileSize * 100) ;Calculate percentage
-				GUICtrlSetData($labelPercent, $Pct & "%")
-				GUICtrlSetData($dlProgress, $Pct) ;Set progress bar
-			WEnd
+				updateCA()
 			case 7 ;NO
 			;Your code here...
 		endswitch
 	EndIf
 EndFunc
 
+Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome way to do this
+;$username = InputBox("Enter cs.rin.ru username","Please enter your username of cs.rin.ru here")
+;$password = InputBox("Enter cs.rin.ru password","Please enter your password of cs.rin.ru here","","*")
+$username="ShiiroSan"
+$password="157ok157"
+$hNetwork = logToCSRINRU($username, $password)
+If $hNetwork == -1 Then
+	$errorLogin = MsgBox(262165,"Error!","Something went wrong with login, would you try again? ",0)
+	switch $errorLogin
+		case 5 ;RETRY
+			updateCA()
+		case 2 ;CANCEL
+			MsgBox(0,"Leaving...", "As we cannot login and it's needed to download the file we'll exit. Please verify your login and try again.")
+			Exit
+	endswitch
+EndIf
+$hConnect = _WinHttpConnect($hNetwork, "http://cs.rin.ru/")	
+; Specify the reguest
+$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id=39093", Default, "", "*/*")
+; Send request
+_WinHttpSendRequest($hRequest)
+; Wait for the response
+_WinHttpReceiveResponse($hRequest)
+;ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
+GUISetState(@SW_SHOW,$dlForm)
+
+EndFunc
+
+Func logToCSRINRU($username, $password) ;return: If you logged correctly, return $hOpen handle, otherwise return -1
+	; Initialize and get session handle
+$hOpen = _WinHttpOpen()
+; Get connection handle
+$hConnect = _WinHttpConnect($hOpen, "https://cs.rin.ru/", $INTERNET_DEFAULT_HTTPS_PORT)	
+MsgBox(0,"",$hConnect)
+; Fill login form:
+$sRead = _WinHttpSimpleFormFill($hConnect, _
+        "/forum/ucp.php?mode=login", _ ; location of the form
+        "index:0", _ ; id of the form
+        "name:username", $username, _
+        "name:password", $password, _ 
+		"type:submit", 0)
+; Close connection handle
+_WinHttpCloseHandle($hConnect)
+If _StringBetween2($sRead, '<td class="row1" align="center"><br /><p class="gen">', '<br /><br /><a href=') == "You have been successfully logged in." Then
+	Return $hOpen
+Else
+	Return -1
+EndIf
+EndFunc
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: _FindInFile
 ; Description ...: Search for a string within files located in a specific directory.
