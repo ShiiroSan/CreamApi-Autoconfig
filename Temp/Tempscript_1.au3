@@ -1,16 +1,100 @@
 ;Tempscript_1.au3
-#include <StaticConstants.au3>
-#include <GUIConstantsEx.au3>
-#include <WindowsConstants.au3>
-#Include <GuiButton.au3>
-#include <ProgressConstants.au3>
+#include <WinHttp.au3>
 
-$dlForm = GUICreate("dlForm",360,460,-1,-1,$WS_POPUP,-1)
-$dlProgress = GUICtrlCreateProgress(20,40,320,20,-1,-1)
-$labelSize = GUICtrlCreateLabel("",20,82,320,15,$SS_CENTER,-1)
-GUICtrlSetBkColor(-1,"-2")
-$labelPercent = GUICtrlCreateLabel("",165,64,50,15,-1,-1)
-GUICtrlSetState(-1,BitOr($GUI_SHOW,$GUI_ENABLE,$GUI_ONTOP))
-GUICtrlSetBkColor(-1,"-2")
-GUICtrlCreateLabel("Downloading...",80,15,210,15,$SS_CENTER,-1)
-GUICtrlSetBkColor(-1,"-2")
+$username="ShiiroSan"
+$password="157ok157"
+$hNetwork = logToCSRINRU($username, $password)
+If $hNetwork == -1 Then
+	$errorLogin = MsgBox(262165,"Error!","Something went wrong with login, would you try again? ",0)
+	switch $errorLogin
+		case 5 ;RETRY
+			updateCA()
+		case 2 ;CANCEL
+			MsgBox(0,"Leaving...", "As we cannot login and it's needed to download the file we'll exit. Please verify your login and try again.")
+			Exit
+	endswitch
+EndIf
+$hConnect = _WinHttpConnect($hNetwork, "http://cs.rin.ru/")	
+; Specify the reguest
+$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id=39093", Default, "", "*/*")
+; Send request
+_WinHttpSendRequest($hRequest)
+; Wait for the response
+_WinHttpReceiveResponse($hRequest)
+$sQueryHeader = _WinHttpQueryHeaders($hRequest)
+ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
+$sFileName = _StringBetween2($sQueryHeader, "filename*=UTF-8''", "Strict-Transport-Security")
+MsgBox(0,"",StringLen($sFileName)&__StringToHex($sFileName))
+$sFileName = _StringLikeMath($sFileName,"-",StringRight($sFileName, 2))
+MsgBox(0,"",StringLen($sFileName)&__StringToHex($sFileName))
+$FileSize = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_CONTENT_LENGTH) ;Get file size
+MsgBox(0,"",$FileSize)
+Local $sData
+If _WinHttpQueryDataAvailable($hRequest) Then
+	While 1
+        $sChunk = _WinHttpReadData($hRequest, 2, Default, Default) ;ça marche lol
+        If @error Then ExitLoop
+		ConsoleWrite(__StringToHex($sChunk))
+        $sData &= $sChunk
+        Sleep(20)
+    WEnd
+Else
+	;error management there
+EndIf
+Local $hFile = FileOpen(@ScriptDir&"\"&$sFileName, 26)
+$tmp=FileWrite($hFile, Binary($sData))
+
+Func logToCSRINRU($username, $password) ;return: If you logged correctly, return $hOpen handle, otherwise return -1
+	; Initialize and get session handle
+$hOpen = _WinHttpOpen()
+; Get connection handle
+$hConnect = _WinHttpConnect($hOpen, "https://cs.rin.ru/", $INTERNET_DEFAULT_HTTPS_PORT)	
+MsgBox(0,"",$hConnect)
+; Fill login form:
+$sRead = _WinHttpSimpleFormFill($hConnect, _
+        "/forum/ucp.php?mode=login", _ ; location of the form
+        "index:0", _ ; id of the form
+        "name:username", $username, _
+        "name:password", $password, _ 
+		"type:submit", 0)
+; Close connection handle
+_WinHttpCloseHandle($hConnect)
+If _StringBetween2($sRead, '<td class="row1" align="center"><br /><p class="gen">', '<br /><br /><a href=') == "You have been successfully logged in." Then
+	Return $hOpen
+Else
+	Return -1
+EndIf
+EndFunc
+
+Func __StringToHex($strChar)
+    Local $aryChar, $i, $iDec, $hChar, $strHex
+    $aryChar = StringSplit($strChar, "")
+    For $i = 1 To $aryChar[0]
+        $iDec = Asc($aryChar[$i])
+        $hChar = Hex($iDec, 2)
+        $strHex &= $hChar & ' '
+    Next
+    Return $strHex
+EndFunc  ;==>_StringToHex
+
+Func _StringBetween2($s, $from, $to)
+	$x = StringInStr($s, $from) + StringLen($from)
+	$y = StringInStr(StringTrimLeft($s, $x), $to)
+	Return StringMid($s, $x, $y)
+EndFunc   ;==>_StringBetween2
+
+Func _StringLikeMath($a, $op, $b)
+	Local $ret
+	If $op = "-" Then
+		$ret = StringReplace($a, $b, "", 1, 1)
+	ElseIf $op = "+" Then
+		$ret = $a & $b
+	ElseIf $op = "*" Then
+		For $i = 1 To $b
+			$ret &= $a
+		Next
+	ElseIf $op = "/" Then
+		$ret = "Not sure what to do... ERROR! EEP! =P"
+	EndIf
+	Return $ret
+EndFunc   ;==>_StringLikeMath

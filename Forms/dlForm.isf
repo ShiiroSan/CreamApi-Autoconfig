@@ -5,11 +5,11 @@
 #Include <GuiButton.au3>
 #include <ProgressConstants.au3>
 
-$dlForm = GUICreate("dlForm",360,138,-1,-1,$WS_POPUP,-1)
-$dlProgress = GUICtrlCreateProgress(20,40,320,20,-1,-1)
-$labelSize = GUICtrlCreateLabel("",20,82,320,15,$SS_CENTER,-1)
+Global $dlForm = GUICreate("dlForm",360,138,-1,-1,$WS_POPUP,-1)
+Global $dlProgress = GUICtrlCreateProgress(20,40,320,20,-1,-1)
+Global $labelSize = GUICtrlCreateLabel("",20,82,320,15,$SS_CENTER,-1)
 GUICtrlSetBkColor(-1,"-2")
-$labelPercent = GUICtrlCreateLabel("",165,64,50,15,-1,-1)
+Global $labelPercent = GUICtrlCreateLabel("",165,64,50,15,-1,-1)
 GUICtrlSetState(-1,BitOr($GUI_SHOW,$GUI_ENABLE,$GUI_ONTOP))
 GUICtrlSetBkColor(-1,"-2")
 GUICtrlCreateLabel("Downloading...",80,15,210,15,$SS_CENTER,-1)
@@ -50,8 +50,8 @@ gui_event_secoundarydown=
 gui_event_secoundaryup=
 gui_event_resized=
 gui_event_dropped=
-[0x00122DC0]
-handle=371
+[0x00072CA0]
+handle=405
 locked=0
 resize=
 code=
@@ -78,8 +78,8 @@ order=0
 tabpage=-1
 iconindex=
 textmode=text
-[0x00142D62]
-handle=372
+[0x00012CA2]
+handle=406
 locked=0
 resize=
 code=
@@ -106,8 +106,8 @@ order=2
 tabpage=-1
 iconindex=
 textmode=text
-[0x00163180]
-handle=373
+[0x00012CA4]
+handle=407
 locked=0
 resize=
 code=
@@ -134,8 +134,8 @@ order=3
 tabpage=-1
 iconindex=
 textmode=text
-[0x000B2DE4]
-handle=374
+[0x00012CA6]
+handle=408
 locked=0
 resize=
 code=
