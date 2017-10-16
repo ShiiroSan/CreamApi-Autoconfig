@@ -2,13 +2,13 @@
 #AutoIt3Wrapper_Icon=CreamApiFileCreator_99.ico
 #AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_UseUpx=y
-#AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=Automatically create files for CreamAPI made by deadmau5. This program is made by Shiirosan & Anomaly, it is open-source and free for use. If you paid for this, well... you got fucked.
 #AutoIt3Wrapper_Res_Description=Automatically make ini files for CreamAPI, as well as importing the .dll file.
-#AutoIt3Wrapper_Res_Fileversion=3.0
+#AutoIt3Wrapper_Res_Fileversion=3.0.0.0
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=p
 #AutoIt3Wrapper_Res_LegalCopyright=deadmau5 for CreamAPI
 #AutoIt3Wrapper_Res_Language=1033
+#AutoIt3Wrapper_Res_File_Add=C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Au3Stripper=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -431,6 +431,11 @@ Func checkVersion()
 	If FileExists(@ScriptDir&"\"&$creamApiVersion) Then
 		Return True
 	Else
+		;Check on serverside if version supported = version on rinru
+		;check on clientside if version = version on rinru and is supportedVersion
+		;if both is good then you should update
+		;if clientside = rin and not supported you could update but not sure if it will work correctly
+		;otherwise gtfo
 		Local $needToUp = MsgBox(36,"Need to update","A new version might be available, would you like to update it? " & @CRLF & "Actual version found: " & $installedVersion & @CRLF & "New version found: " & $creamApiVersion,0)
 		switch $needToUp
 			case 6 ;YES
@@ -467,29 +472,36 @@ _WinHttpReceiveResponse($hRequest)
 $sQueryHeader = _WinHttpQueryHeaders($hRequest)
 ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
 $sFileName = _StringBetween2($sQueryHeader, "filename*=UTF-8''", "Strict-Transport-Security")
-MsgBox(0,"",StringLen($sFileName)&__StringToHex($sFileName))
 $sFileName = _StringLikeMath($sFileName,"-",StringRight($sFileName, 2))
-MsgBox(0,"",StringLen($sFileName)&__StringToHex($sFileName))
 GUISetState(@SW_SHOW,$dlForm)
 $FileSize = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_CONTENT_LENGTH) ;Get file size
-MsgBox(0,"",$FileSize)
 Progress($FileSize)
 Local $sData
 If _WinHttpQueryDataAvailable($hRequest) Then
+	$hFile = FileOpen($sFileName, BitOR(16, 1))
 	While 1
-        $sChunk = _WinHttpReadData_Ex($hRequest, 1, Default, Default, Progress)
+        $sChunk = _WinHttpReadData_Ex($hRequest, 2, Default, Default, Progress)
         If @error Then ExitLoop
-		ConsoleWrite(__StringToHex($sChunk))
-        $sData &= $sChunk
+		FileWrite($hFile, $sChunk)
         Sleep(20)
     WEnd
+	FileClose($hFile)
 Else
 	;error management there
 EndIf
-Local $hFile = FileOpen(@ScriptDir&"\"&$sFileName, 26)
-$tmp=FileWrite($hFile, $sData)
+	$zipExtractDir = @ScriptDir&"\"&StringTrimRight($sFileName,3)
+	_Extract($sFileName, $zipExtractDir)
 EndFunc
 
+Func _Extract($fileName, $outPutDir)
+	FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe")
+	If Not FileExists(@TempDir & "\7za.exe") Then
+		MsgBox(16,"Error!","Cannot proceed to extraction. Aborting...",0)
+		Exit
+	EndIf
+	RunWait(@TempDir & "\7za.exe x "& $fileName&"-o"&$outPutDir)
+	FileDelete(@TempDir & "\7za.exe")
+EndFunc
 
 Func __StringToHex($strChar)
     Local $aryChar, $i, $iDec, $hChar, $strHex

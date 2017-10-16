@@ -32,17 +32,54 @@ MsgBox(0,"",$FileSize)
 Local $sData
 If _WinHttpQueryDataAvailable($hRequest) Then
 	While 1
+		$hFile = FileOpen("test.bin", BitOR(16, 1))
         $sChunk = _WinHttpReadData($hRequest, 2, Default, Default) ;ça marche lol
         If @error Then ExitLoop
-		ConsoleWrite(__StringToHex($sChunk))
+		;ConsoleWrite(__StringToHex($sChunk))
         $sData &= $sChunk
+		FileWrite($hFile, $sChunk)
+		FileClose($hFile)
         Sleep(20)
     WEnd
 Else
 	;error management there
 EndIf
-Local $hFile = FileOpen(@ScriptDir&"\"&$sFileName, 26)
-$tmp=FileWrite($hFile, Binary($sData))
+;$sData=StringTrimLeft($sData, 2)
+;$textArray=_byteStringToByteArray($sData, 400)
+;fileWriteByteArray("test.bin",$textArray)
+
+
+Func fileWriteByteArray($file, $byteArray)
+	
+	$nameThisVar=$byteArray[0]
+	For $i = 1 To $nameThisVar Step 1
+		$hFile = FileOpen($file, BitOR(16, 1))
+		FileWrite($hFile, "0x"&$byteArray[$i])
+		FileClose($hFile)
+	Next
+EndFunc
+
+; Function _byteStringToByteArray()
+; Input: 
+; 	$byteString : A string of byte in the following format XXXXX 
+; 	$splitNumber: Number of character to set in each element
+; Output: 
+;	An array following the next format.
+; 		Element 0: Number of split done on the string. 
+;		Element n: Split of the input string
+
+Func _byteStringToByteArray($byteString, $splitNumber = 42)
+	$stringLength=StringLen($byteString)
+	$numberOfPart=Int($stringLength/$splitNumber)+1
+	Local $byteArray[$numberOfPart+1]
+	$byteArray[0]=$numberOfPart
+	For $i = 1 To $numberOfPart Step 1
+		$part=StringLeft($byteString,$splitNumber)
+		$byteString = _StringLikeMath($byteString, "-", $part)
+		$byteArray[$i]=$part
+	Next
+	Return $byteArray
+EndFunc
 
 Func logToCSRINRU($username, $password) ;return: If you logged correctly, return $hOpen handle, otherwise return -1
 	; Initialize and get session handle

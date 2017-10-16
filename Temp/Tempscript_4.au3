@@ -1,23 +1,25 @@
 ;Tempscript_4.au3
 ;Writing byte to text File
 #include <Array.au3>
-;0x377ABCAF271C0004C2DDD4804CF211000000000024000000000000000F4ACB38E05F0D16E95D002D9CCA8666D
-$Text = "0x377ABCAF271C0004C2DDD4804CF211000000000024"
-$Text2 = "0x000000000000000F4"
+$Text = "377ABCAF271C0004C2DDD4804CF211000000000024000000000000000F4ACB38E05F0D16E95D002D9CCA8666"
+;$Text = "0x377ABCAF271C0004C2DDD4804CF211000000000024"
+;$Text2 = "0x000000000000000F4A"
 
-$hFile = FileOpen("test.bin", BitOR(16, 1)); Okay. What exactly is the BitOR for? I think I know, but not sure.
-FileWrite($hFile, $Text);should write 4 bytes
-FileWrite($hFile, $Text2);should write 4 bytes
-FileClose($hFile)
+;$hFile = FileOpen("test.bin", BitOR(16, 1)); Okay. What exactly is the BitOR for? I think I know, but not sure.
+;FileWrite($hFile, $Text);should write 4 bytes
+;FileWrite($hFile, $Text2);should write 4 bytes
+;FileClose($hFile)
 
-;~ $textArray=_byteStringToByteArray($Text)
-;~ fileWriteByteArray("test.bin",$textArray)
+$textArray=_byteStringToByteArray($Text)
+fileWriteByteArray("test.bin",$textArray)
 
 Func fileWriteByteArray($file, $byteArray)
-	$hFile = FileOpen($file, 17)
+	
 	$nameThisVar=$byteArray[0]
 	For $i = 1 To $nameThisVar Step 1
+		$hFile = FileOpen($file, BitOR(16, 1))
 		FileWrite($hFile, "0x"&$byteArray[$i])
+		FileClose($hFile)
 	Next
 EndFunc
 
@@ -30,7 +32,7 @@ EndFunc
 ; 		Element 0: Number of split done on the string. 
 ;		Element n: Split of the input string
 
-Func _byteStringToByteArray($byteString, $splitNumber = 21)
+Func _byteStringToByteArray($byteString, $splitNumber = 42)
 	$stringLength=StringLen($byteString)
 	$numberOfPart=Int($stringLength/$splitNumber)+1
 	Local $byteArray[$numberOfPart+1]
