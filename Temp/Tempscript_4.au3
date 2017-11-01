@@ -1,62 +1,15 @@
-;Tempscript_4.au3
-;Writing byte to text File
 #include <Array.au3>
-$Text = "377ABCAF271C0004C2DDD4804CF211000000000024000000000000000F4ACB38E05F0D16E95D002D9CCA8666"
-;$Text = "0x377ABCAF271C0004C2DDD4804CF211000000000024"
-;$Text2 = "0x000000000000000F4A"
+#include <File.au3>
 
-;$hFile = FileOpen("test.bin", BitOR(16, 1)); Okay. What exactly is the BitOR for? I think I know, but not sure.
-;FileWrite($hFile, $Text);should write 4 bytes
-;FileWrite($hFile, $Text2);should write 4 bytes
-;FileClose($hFile)
-
-$textArray=_byteStringToByteArray($Text)
-fileWriteByteArray("test.bin",$textArray)
-
-Func fileWriteByteArray($file, $byteArray)
-	
-	$nameThisVar=$byteArray[0]
-	For $i = 1 To $nameThisVar Step 1
-		$hFile = FileOpen($file, BitOR(16, 1))
-		FileWrite($hFile, "0x"&$byteArray[$i])
-		FileClose($hFile)
-	Next
-EndFunc
-
-; Function _byteStringToByteArray()
-; Input: 
-; 	$byteString : A string of byte in the following format XXXXX 
-; 	$splitNumber: Number of character to set in each element
-; Output: 
-;	An array following the next format.
-; 		Element 0: Number of split done on the string. 
-;		Element n: Split of the input string
-
-Func _byteStringToByteArray($byteString, $splitNumber = 42)
-	$stringLength=StringLen($byteString)
-	$numberOfPart=Int($stringLength/$splitNumber)+1
-	Local $byteArray[$numberOfPart+1]
-	$byteArray[0]=$numberOfPart
-	For $i = 1 To $numberOfPart Step 1
-		$part=StringLeft($byteString,$splitNumber)
-		$byteString = _StringLikeMath($byteString, "-", $part)
-		$byteArray[$i]=$part
-	Next
-	Return $byteArray
-EndFunc
-
-Func _StringLikeMath($a, $op, $b)
-	Local $ret
-	If $op = "-" Then
-		$ret = StringReplace($a, $b, "", 1, 1)
-	ElseIf $op = "+" Then
-		$ret = $a & $b
-	ElseIf $op = "*" Then
-		For $i = 1 To $b
-			$ret &= $a
-		Next
-	ElseIf $op = "/" Then
-		$ret = "Not sure what to do... ERROR! EEP! =P"
-	EndIf
-	Return $ret
-EndFunc   ;==>_StringLikeMath
+Local $caFolderEx = _FileListToArray("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig", "CreamAPI *", 2)
+If @error == 1 Or @error == 4 Then
+	MsgBox(0,"","No version found!")
+Else
+_ArrayDisplay($caFolderEx)
+If $caFolderEx[0] > 1 Then
+	Local $installedVersion = StringRegExp($caFolderEx[$caFolderEx[0]], "CreamAPI (.*)", 1)[0]
+Else
+	Local $installedVersion = StringRegExp($caFolderEx[1], "CreamAPI (.*)", 1)[0]
+EndIf
+MsgBox(0,"",$installedVersion)
+EndIf

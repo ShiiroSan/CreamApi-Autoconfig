@@ -28,14 +28,14 @@
 #include <File.au3>
 #include <InetConstants.au3>
 #include <WinAPIFiles.au3>
-
+#include <ExtMsgBox.au3>
 #include <WinHttp.au3>
 
 #Region GUI Includes
 #include "Forms/CreamApiConfigurator.isf"
 #include "Forms/searchForm.isf"
 #include "Forms\dlForm.isf"
-#EndRegion
+#EndRegion GUI Includes
 
 Func _StringLikeMath($a, $op, $b)
 	Local $ret
@@ -55,21 +55,19 @@ EndFunc   ;==>_StringLikeMath
 
 Global $debug = 0
 
-updateCA()
-Exit
-getCreamApiVersion()
+MsgBox(0, "", getCreamApiVersion())
 Exit
 
 If FileExists("caconfig.ini") Then
-	$language = IniRead("caconfig.ini","default","language","English")
-	$extraProtectionBypass = IniRead("caconfig.ini","default","extraProtectionBypass",False)
-	$useOffline = IniRead("caconfig.ini","default","offlineMode",False)
-	$userdataFolder = IniRead("caconfig.ini","default","userdataFolder",False)
-	$lowviolence = IniRead("caconfig.ini","default","lowviolence",False)
-	$wrapperMode = IniRead("caconfig.ini","default","$wrapperMode",False)
+	$language = IniRead("caconfig.ini", "default", "language", "English")
+	$extraProtectionBypass = IniRead("caconfig.ini", "default", "extraProtectionBypass", False)
+	$useOffline = IniRead("caconfig.ini", "default", "offlineMode", False)
+	$userdataFolder = IniRead("caconfig.ini", "default", "userdataFolder", False)
+	$lowviolence = IniRead("caconfig.ini", "default", "lowviolence", False)
+	$wrapperMode = IniRead("caconfig.ini", "default", "$wrapperMode", False)
 	$configuratorShow = 0
 Else
-	GUISetState(@SW_SHOW,$CreamApiConfigurator)
+	GUISetState(@SW_SHOW, $CreamApiConfigurator)
 	$configuratorShow = 1
 EndIf
 While $configuratorShow
@@ -80,27 +78,27 @@ While $configuratorShow
 		Case $cancelConfBtn
 			_ConfirmClose()
 		Case $setDefaultBtn
-			$setDefault = MsgBox(266273,"Are you sure?","By setting this as default you'll never see this windows again and the option above will be use each time you make a patch. " & @CRLF & "You can always remove the default options by deleting caconfig.ini on [working dir].",0)
-			switch $setDefault
-				case 1 ;OK
-				IniWrite("caconfig.ini","default","language",GUICtrlRead($languageCombo))
-				IniWrite("caconfig.ini","default","extraProtectionBypass",_IsChecked($extraProtecBypassCheckbox))
-				IniWrite("caconfig.ini","default","$offlineMode",_IsChecked($offlineCheckbox))
-				IniWrite("caconfig.ini","default","userdataFolder",_IsChecked($userdataFolderCheckxox))
-				IniWrite("caconfig.ini","default","lowviolence",_IsChecked($lowviolenceCheckbox))
-				IniWrite("caconfig.ini","default","$wrapperMode",_IsChecked($wrapperCheckbox))
-				$language = GUICtrlRead($languageCombo)
-				$extraProtectionBypass = _IsChecked($extraProtecBypassCheckbox)
-				$useOffline = _IsChecked($offlineCheckbox)
-				$userdataFolder = _IsChecked($userdataFolderCheckxox)
-				$lowviolence = _IsChecked($lowviolenceCheckbox)
-				$wrapperMode = _IsChecked($wrapperCheckbox)
-				GUISetState(@SW_HIDE,$CreamApiConfigurator)
-				$configuratorShow = 0
-				
-				case 2 ;CANCEL
-				;nothing to do folk
-			endswitch
+			$setDefault = MsgBox(266273, "Are you sure?", "By setting this as default you'll never see this windows again and the option above will be use each time you make a patch. " & @CRLF & "You can always remove the default options by deleting caconfig.ini on [working dir].", 0)
+			Switch $setDefault
+				Case 1 ;OK
+					IniWrite("caconfig.ini", "default", "language", GUICtrlRead($languageCombo))
+					IniWrite("caconfig.ini", "default", "extraProtectionBypass", _IsChecked($extraProtecBypassCheckbox))
+					IniWrite("caconfig.ini", "default", "$offlineMode", _IsChecked($offlineCheckbox))
+					IniWrite("caconfig.ini", "default", "userdataFolder", _IsChecked($userdataFolderCheckxox))
+					IniWrite("caconfig.ini", "default", "lowviolence", _IsChecked($lowviolenceCheckbox))
+					IniWrite("caconfig.ini", "default", "$wrapperMode", _IsChecked($wrapperCheckbox))
+					$language = GUICtrlRead($languageCombo)
+					$extraProtectionBypass = _IsChecked($extraProtecBypassCheckbox)
+					$useOffline = _IsChecked($offlineCheckbox)
+					$userdataFolder = _IsChecked($userdataFolderCheckxox)
+					$lowviolence = _IsChecked($lowviolenceCheckbox)
+					$wrapperMode = _IsChecked($wrapperCheckbox)
+					GUISetState(@SW_HIDE, $CreamApiConfigurator)
+					$configuratorShow = 0
+					
+				Case 2 ;CANCEL
+					;nothing to do folk
+			EndSwitch
 		Case $validateBtn
 			$language = GUICtrlRead($languageCombo)
 			$extraProtectionBypass = _IsChecked($extraProtecBypassCheckbox)
@@ -108,7 +106,7 @@ While $configuratorShow
 			$userdataFolder = _IsChecked($userdataFolderCheckxox)
 			$lowviolence = _IsChecked($lowviolenceCheckbox)
 			$wrapperMode = _IsChecked($wrapperCheckbox)
-			GUISetState(@SW_HIDE,$CreamApiConfigurator)
+			GUISetState(@SW_HIDE, $CreamApiConfigurator)
 			$configuratorShow = 0
 	EndSwitch
 WEnd
@@ -123,7 +121,7 @@ $line9clear = StringRegExpReplace($line9clear, "\""", "")
 $line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
 $defaultGameFolder = $line9clear & "\SteamApps\common\"
 $gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
-#EndRegion
+#EndRegion ### Get Steam Path ###
 
 If $gameDir == "" Then
 	$noGame = True
@@ -217,11 +215,11 @@ While 1
 							$uiGameNumber = UBound($aTableData) - 1
 							Local $aItem[4]
 							If $uiGameNumber > 1 Then ;more than 1 game is found
-								local $posToDelete
-								Local $iToDel=0
-								For $i = 1 To UBound($aTableData,1) - 1 Step 1 ;this whole part is needed to get only game on multi-game search
+								Local $posToDelete
+								Local $iToDel = 0
+								For $i = 1 To UBound($aTableData, 1) - 1 Step 1 ;this whole part is needed to get only game on multi-game search
 									If $aTableData[$i][1] <> "Game" Then
-										$iToDel+=1
+										$iToDel += 1
 										If $iToDel > 1 Then $posToDelete = $posToDelete & ";"
 										$posToDelete = $posToDelete & $i
 									EndIf
@@ -291,7 +289,7 @@ Func _StringBetween2($s, $from, $to)
 	Return StringMid($s, $x, $y)
 EndFunc   ;==>_StringBetween2
 
-Func exportCreamApi()	
+Func exportCreamApi()
 	If $debug Then MsgBox(0, "", "Hey! You're in debug so don't expect it to save the cracked files kiddo")
 	If Not $noGame Then
 		If Not FileExists($gameDir & "\steam_api.dll") Or Not FileExists($gameDir & "\steam_api64.dll") Then
@@ -339,24 +337,24 @@ Func exportCreamApi()
 	;;;; Tbh will write only if value is different than default. Otherwise we'll let it like that
 	If $language <> "Use default" Then
 		_ReplaceStringInFile($creamApiPoint, ";language", "language")
-		IniWrite($creamApiPoint,"steam","language",$language)
+		IniWrite($creamApiPoint, "steam", "language", $language)
 	EndIf
 	If $extraProtectionBypass <> False Then
-		IniWrite($creamApiPoint,"steam","extraprotection",StringLower($extraProtectionBypass))
+		IniWrite($creamApiPoint, "steam", "extraprotection", StringLower($extraProtectionBypass))
 	EndIf
 	If $userdataFolder <> True Then
 		_ReplaceStringInFile($creamApiPoint, ";forceuserdatafolder", "forceuserdatafolder")
-		IniWrite($creamApiPoint,"steam","forceuserdatafolder",StringLower($userdataFolder))
+		IniWrite($creamApiPoint, "steam", "forceuserdatafolder", StringLower($userdataFolder))
 	EndIf
 	If $lowviolence <> False Then
 		_ReplaceStringInFile($creamApiPoint, ";lowviolence", "lowviolence")
-		IniWrite($creamApiPoint,"steam","lowviolence",StringLower($lowviolence))
+		IniWrite($creamApiPoint, "steam", "lowviolence", StringLower($lowviolence))
 	EndIf
 	If $useOffline <> False Then
-		IniWrite($creamApiPoint,"steam","forceoffline",StringLower($useOffline))
+		IniWrite($creamApiPoint, "steam", "forceoffline", StringLower($useOffline))
 	EndIf
 	If $wrapperMode <> False Then
-		IniWrite($creamApiPoint,"steam","wrappermode",StringLower($wrapperMode))
+		IniWrite($creamApiPoint, "steam", "wrappermode", StringLower($wrapperMode))
 	EndIf
 	
 	If Not $debug Then
@@ -400,151 +398,186 @@ Func exportCreamApi()
 			 & "Made by ShiiroSan & Anomaly for cs.rin.ru communities. Thanks to deadmau5 for CreamAPI.")
 EndFunc   ;==>exportCreamApi
 
-Func firstRun()
+Func firstRun() ;This is useless, should be messed with checkVersion
 	Local $creamApiVersion = getCreamApiVersion()
-	InetGet("https://www.shiirosan.com/caversion",@AppDataDir&"/supportedVersionCA")
-	Local $supportedVersion = FileRead(@AppDataDir&"/supportedVersionCA")
+	InetGet("https://www.shiirosan.com/caversion", @AppDataDir & "/supportedVersionCA")
+	Local $supportedVersion = FileRead(@AppDataDir & "/supportedVersionCA")
 	If $creamApiVersion <> $supportedVersion Then
 		If $creamApiVersion > $supportedVersion Then
-			$needToUp = MsgBox(68,"Info","The new version isn't officially supported for the moment." & @CRLF & "You might report it to ShiiroSan on cs.rin.ru, or wait a few days." & @CRLF & "" & @CRLF & "However, we could always try to use the new version with old parameter [CAN BE VERY UNSTABLE AND BREAK YOUR GAME]. " & @CRLF & "Do you want to try?",0)
-			switch $needToUp
-				case 6 ;YES
+			$needToUp = MsgBox(68, "Info", "The new version isn't officially supported for the moment." & @CRLF & "You might report it to ShiiroSan on cs.rin.ru, or wait a few days." & @CRLF & "" & @CRLF & "However, we could always try to use the new version with old parameter [CAN BE VERY UNSTABLE AND BREAK YOUR GAME]. " & @CRLF & "Do you want to try?", 0)
+			Switch $needToUp
+				Case 6 ;YES
 					
-				case 7 ;NO
+				Case 7 ;NO
 					
-			endswitch
+			EndSwitch
 		EndIf
 	EndIf
-EndFunc
+EndFunc   ;==>firstRun
 
 Func getCreamApiVersion()
 	;;; Download cs.rin.ru page and read if version is the same.
-	$csrinruPage=_IECreate("https://cs.rin.ru/forum/viewtopic.php?f=29&t=70576",0,0,1)
-	$csrinruText=_IEBodyReadHTML($csrinruPage)
-	$versionOnRinRu=_StringBetween2($csrinruText,'"> <div style="display: none;">',':<br><br>')
-	return $versionOnRinRu
-EndFunc
+	$csrinruPage = _IECreate("https://cs.rin.ru/forum/viewtopic.php?f=29&t=70576", 0, 0, 1)
+	$csrinruText = _IEBodyReadHTML($csrinruPage)
+	_IEQuit($csrinruPage)
+	$versionOnRinRu = _StringBetween2($csrinruText, '"> <div style="display: none;">', ':<br><br>')
+	Return $versionOnRinRu
+EndFunc   ;==>getCreamApiVersion
 
 Func checkVersion()
-	Local $creamApiVersion=getCreamApiVersion()
-	Local $installedVersion=FileRead("version.txt")
-	If FileExists(@ScriptDir&"\"&$creamApiVersion) Then
-		Return True
-	Else
-		;Check on serverside if version supported = version on rinru
-		;check on clientside if version = version on rinru and is supportedVersion
-		;if both is good then you should update
-		;if clientside = rin and not supported you could update but not sure if it will work correctly
-		;otherwise gtfo
-		Local $needToUp = MsgBox(36,"Need to update","A new version might be available, would you like to update it? " & @CRLF & "Actual version found: " & $installedVersion & @CRLF & "New version found: " & $creamApiVersion,0)
-		switch $needToUp
-			case 6 ;YES
-				updateCA()
-			case 7 ;NO
-			;Your code here...
-		endswitch
+	$shiiroNetStatus = InetGet("https://www.shiirosan.com/caversion", @AppDataDir & "/supportedVersionCA")
+	If Not $shiiroNetStatus Then
+		;Here we are in the case were there is no connection to shiirosan.com
+		If Not FileExists(@AppDataDir & "/supportedVersionCA") Then
+			MsgBox(48, "Error", "It seems the application cannot connect to www.shiirosan.com. Please verify your firewall and network connection. " & @CRLF & "If both are OK, you should try again later.", 0)
+			Exit
+		EndIf
 	EndIf
-EndFunc
+	Local $supportedVersion = FileRead(@AppDataDir & "/supportedVersionCA")
+	
+	Local $creamApiVersion = getCreamApiVersion()
+	If $creamApiVersion = "" Then
+		MsgBox(48, "Error", "It seems the application cannot connect to cs.rin.ru. Please verify your firewall and network connection. " & @CRLF & "If both are OK, you should try again later.", 0)
+		Exit
+	Else
+		Local $caFolderEx = _FileListToArray(@ScriptDir, "CreamAPI *", 2)
+		If @error == 1 Or @error == 4 Then
+			ConsoleWrite("No version found!" & @CRLF)
+			updateCA()
+			Return [WE DID AN UPDATE]
+		Else
+			If $caFolderEx[0] > 1 Then
+				Local $verFolder = $caFolderEx[$caFolderEx[0]]
+			Else
+				Local $verFolder = $caFolderEx[1]
+			EndIf
+		EndIf
+		Local $installedVersion = StringRegExp($verFolder, "CreamAPI (.*)", 1)[0]
+		If FileExists(@ScriptDir & "\CreamAPI " & $creamApiVersion) Then
+			Return [NO NEED To UPDATE]
+		Else
+			If $installedVersion <> $creamApiVersion Then
+				If $creamApiVersion > $supportedVersion Then
+					;ask the user if he wants to take to risk to fucked up his game o/
+				Else ;The version supported == forum one so we might update
+					Local $needToUp = MsgBox(36, "Need to update", "A new version might be available, would you like to update it? " & @CRLF & "Actual version found: " & $installedVersion & @CRLF & "New version found: " & $creamApiVersion, 0)
+					Switch $needToUp
+						Case 6 ;YES
+							updateCA()
+							Return [WE DID AN UPDATE]
+						Case 7 ;NO
+							Return [USER IS DUMB]
+					EndSwitch
+				EndIf
+			Else ;No need to update
+				Return [NO NEED To UPDATE]
+			EndIf
+		EndIf
+	EndIf
+EndFunc   ;==>checkVersion
 
 Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome way to do this
-;$username = InputBox("Enter cs.rin.ru username","Please enter your username of cs.rin.ru here")
-;$password = InputBox("Enter cs.rin.ru password","Please enter your password of cs.rin.ru here","","*")
-$username="ShiiroSan"
-$password="157ok157"
-$hNetwork = logToCSRINRU($username, $password)
-If $hNetwork == -1 Then
-	$errorLogin = MsgBox(262165,"Error!","Something went wrong with login, would you try again? ",0)
-	switch $errorLogin
-		case 5 ;RETRY
-			updateCA()
-		case 2 ;CANCEL
-			MsgBox(0,"Leaving...", "As we cannot login and it's needed to download the file we'll exit. Please verify your login and try again.")
-			Exit
-	endswitch
-EndIf
-$hConnect = _WinHttpConnect($hNetwork, "http://cs.rin.ru/")	
-; Specify the reguest
-$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id=39093", Default, "", "*/*")
-; Send request
-_WinHttpSendRequest($hRequest)
-; Wait for the response
-_WinHttpReceiveResponse($hRequest)
-$sQueryHeader = _WinHttpQueryHeaders($hRequest)
-ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
-$sFileName = _StringBetween2($sQueryHeader, "filename*=UTF-8''", "Strict-Transport-Security")
-$sFileName = _StringLikeMath($sFileName,"-",StringRight($sFileName, 2))
-GUISetState(@SW_SHOW,$dlForm)
-$FileSize = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_CONTENT_LENGTH) ;Get file size
-Progress($FileSize)
-Local $sData
-If _WinHttpQueryDataAvailable($hRequest) Then
-	$hFile = FileOpen($sFileName, BitOR(16, 1))
-	While 1
-        $sChunk = _WinHttpReadData_Ex($hRequest, 2, Default, Default, Progress)
-        If @error Then ExitLoop
-		FileWrite($hFile, $sChunk)
-        Sleep(20)
-    WEnd
-	FileClose($hFile)
-Else
-	;error management there
-EndIf
-	$zipExtractDir = @ScriptDir&"\"&StringTrimRight($sFileName,3)
-	_Extract($sFileName, $zipExtractDir)
-EndFunc
+	;$username = InputBox("Enter cs.rin.ru username","Please enter your username of cs.rin.ru here")
+	;$password = InputBox("Enter cs.rin.ru password","Please enter your password of cs.rin.ru here","","*")
+	$username = "ShiiroSan"
+	$password = "157ok157"
+	$hNetwork = logToCSRINRU($username, $password)
+	If $hNetwork == -1 Then
+		$errorLogin = MsgBox(262165, "Error!", "Something went wrong with login, would you try again? ", 0)
+		Switch $errorLogin
+			Case 5 ;RETRY
+				updateCA()
+			Case 2 ;CANCEL
+				MsgBox(0, "Leaving...", "As we cannot login and it's needed to download the file we'll exit. Please verify your login and try again.")
+		EndSwitch
+	Else
+		$hConnect = _WinHttpConnect($hNetwork, "http://cs.rin.ru/")
+		; Specify the reguest
+		$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id=39093", Default, "", "*/*")
+		; Send request
+		_WinHttpSendRequest($hRequest)
+		; Wait for the response
+		_WinHttpReceiveResponse($hRequest)
+		$sQueryHeader = _WinHttpQueryHeaders($hRequest)
+		ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
+		$sFileName = _StringBetween2($sQueryHeader, "filename*=UTF-8''", "Strict-Transport-Security")
+		$sFileName = _StringLikeMath($sFileName, "-", StringRight($sFileName, 2))
+		GUISetState(@SW_SHOW, $dlForm)
+		$FileSize = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_CONTENT_LENGTH) ;Get file size
+		Progress($FileSize)
+		Local $sData
+		If _WinHttpQueryDataAvailable($hRequest) Then
+			$hFile = FileOpen($sFileName, BitOR(16, 2))
+			While 1
+				$sChunk = _WinHttpReadData_Ex($hRequest, 2, Default, Default, Progress)
+				If @error Then ExitLoop
+				FileWrite($hFile, $sChunk)
+				Sleep(20)
+			WEnd
+			FileClose($hFile)
+		Else
+			;error o/
+		EndIf
+		$fExtract = StringRegExp(StringTrimRight("CreamAPI_Release_v3.0.0.3_Hotfix.7z", 3), "(.*)_Release_v(.*)", 1)
+		$zipExtractDir = @ScriptDir & "\" & $fExtract[0] & " " & $fExtract[1]
+		_Extract($sFileName, $zipExtractDir)
+		MsgBox(0, "", "End")
+	EndIf
+EndFunc   ;==>updateCA
 
 Func _Extract($fileName, $outPutDir)
-	FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe")
+	FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)
+	MsgBox(262144, 'Debug line ~' & @ScriptLineNumber, 'Selection:' & @LF & 'FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)' & @LF & @LF & 'Return:' & @LF & FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)) ;### Debug MSGBOX
 	If Not FileExists(@TempDir & "\7za.exe") Then
-		MsgBox(16,"Error!","Cannot proceed to extraction. Aborting...",0)
+		MsgBox(16, "Error!", "Cannot proceed to extraction. Aborting...", 0)
 		Exit
 	EndIf
-	RunWait(@TempDir & "\7za.exe x "& $fileName&"-o"&$outPutDir)
+	RunWait(@TempDir & "\7za.exe x " & $fileName & '-o"' & $outPutDir & '"')
 	FileDelete(@TempDir & "\7za.exe")
-EndFunc
+EndFunc   ;==>_Extract
 
 Func __StringToHex($strChar)
-    Local $aryChar, $i, $iDec, $hChar, $strHex
-    $aryChar = StringSplit($strChar, "")
-    For $i = 1 To $aryChar[0]
-        $iDec = Asc($aryChar[$i])
-        $hChar = Hex($iDec, 2)
-        $strHex &= $hChar & ' '
-    Next
-    Return $strHex
-EndFunc  ;==>_StringToHex
+	Local $aryChar, $i, $iDec, $hChar, $strHex
+	$aryChar = StringSplit($strChar, "")
+	For $i = 1 To $aryChar[0]
+		$iDec = Asc($aryChar[$i])
+		$hChar = Hex($iDec, 2)
+		$strHex &= $hChar & ' '
+	Next
+	Return $strHex
+EndFunc   ;==>__StringToHex
 
 Func Progress($iSizeAll, $iSizeChunk = 0)
-    Local Static $iMax, $iCurrentSize
-    If $iSizeAll Then $iMax = $iSizeAll
-    $iCurrentSize += $iSizeChunk
+	Local Static $iMax, $iCurrentSize
+	If $iSizeAll Then $iMax = $iSizeAll
+	$iCurrentSize += $iSizeChunk
 	GUICtrlSetData($labelSize, $iCurrentSize & " / " & $iMax)
 	$Pct = Int($iCurrentSize / $iMax * 100) ;Calculate percentage
 	GUICtrlSetData($labelPercent, $Pct & "%")
 	GUICtrlSetData($dlProgress, $Pct) ;Set progress bar
-EndFunc
+EndFunc   ;==>Progress
 
 Func logToCSRINRU($username, $password) ;return: If you logged correctly, return $hOpen handle, otherwise return -1
 	; Initialize and get session handle
-$hOpen = _WinHttpOpen()
-; Get connection handle
-$hConnect = _WinHttpConnect($hOpen, "https://cs.rin.ru/", $INTERNET_DEFAULT_HTTPS_PORT)	
-MsgBox(0,"",$hConnect)
-; Fill login form:
-$sRead = _WinHttpSimpleFormFill($hConnect, _
-        "/forum/ucp.php?mode=login", _ ; location of the form
-        "index:0", _ ; id of the form
-        "name:username", $username, _
-        "name:password", $password, _ 
-		"type:submit", 0)
-; Close connection handle
-_WinHttpCloseHandle($hConnect)
-If _StringBetween2($sRead, '<td class="row1" align="center"><br /><p class="gen">', '<br /><br /><a href=') == "You have been successfully logged in." Then
-	Return $hOpen
-Else
-	Return -1
-EndIf
-EndFunc
+	$hOpen = _WinHttpOpen()
+	; Get connection handle
+	$hConnect = _WinHttpConnect($hOpen, "https://cs.rin.ru/", $INTERNET_DEFAULT_HTTPS_PORT)
+	MsgBox(0, "", $hConnect)
+	; Fill login form:
+	$sRead = _WinHttpSimpleFormFill($hConnect, _
+			"/forum/ucp.php?mode=login", _ ; location of the form
+			"index:0", _ ; id of the form
+			"name:username", $username, _
+			"name:password", $password, _
+			"type:submit", 0)
+	; Close connection handle
+	_WinHttpCloseHandle($hConnect)
+	If _StringBetween2($sRead, '<td class="row1" align="center"><br /><p class="gen">', '<br /><br /><a href=') == "You have been successfully logged in." Then
+		Return $hOpen
+	Else
+		Return -1
+	EndIf
+EndFunc   ;==>logToCSRINRU
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: _FindInFile
 ; Description ...: Search for a string within files located in a specific directory.
@@ -591,64 +624,65 @@ Func _IsChecked(Const $iControlID)
 EndFunc   ;==>_IsChecked
 
 Func _ConfirmClose()
-	$wannaClose = MsgBox(266532,"Are you sure?","Are you sure you want to leave?",0)
-	switch $wannaClose
+	$wannaClose = MsgBox(266532, "Are you sure?", "Are you sure you want to leave?", 0)
+	Switch $wannaClose
 
-		case 6 ;YES
+		Case 6 ;YES
 			Exit
 
-		case 7 ;NO
+		Case 7 ;NO
 			Return
 
-	endswitch
-EndFunc
+	EndSwitch
+EndFunc   ;==>_ConfirmClose
 
 Func _WinHttpReadData_Ex($hRequest, $iMode = Default, $iNumberOfBytesToRead = Default, $pBuffer = Default, $vFunc = Default) ;
-    __WinHttpDefault($iMode, 0)
-    __WinHttpDefault($iNumberOfBytesToRead, 8192)
-    __WinHttpDefault($vFunc, 0)
-    Local $tBuffer, $vOutOnError = ""
-    If $iMode = 2 Then $vOutOnError = Binary($vOutOnError)
-    Switch $iMode
-        Case 1, 2
-            If $pBuffer And $pBuffer <> Default Then
-                $tBuffer = DllStructCreate("byte[" & $iNumberOfBytesToRead & "]", $pBuffer)
-            Else
-                $tBuffer = DllStructCreate("byte[" & $iNumberOfBytesToRead & "]")
-            EndIf
-        Case Else
-            $iMode = 0
-            If $pBuffer And $pBuffer <> Default Then
-                $tBuffer = DllStructCreate("char[" & $iNumberOfBytesToRead & "]", $pBuffer)
-            Else
-                $tBuffer = DllStructCreate("char[" & $iNumberOfBytesToRead & "]")
-            EndIf
-    EndSwitch
-    Local $sReadType = "dword*"
-    If BitAND(_WinHttpQueryOption(_WinHttpQueryOption(_WinHttpQueryOption($hRequest, $WINHTTP_OPTION_PARENT_HANDLE), $WINHTTP_OPTION_PARENT_HANDLE), $WINHTTP_OPTION_CONTEXT_VALUE), $WINHTTP_FLAG_ASYNC) Then $sReadType = "ptr"
-    Local $aCall = DllCall($hWINHTTPDLL__WINHTTP, "bool", "WinHttpReadData", _
-            "handle", $hRequest, _
-            "struct*", $tBuffer, _
-            "dword", $iNumberOfBytesToRead, _
-            $sReadType, 0)
-    If @error Or Not $aCall[0] Then Return SetError(1, 0, "")
-    If Not $aCall[4] Then Return SetError(-1, 0, $vOutOnError)
-    If IsFunc($vFunc) Then $vFunc(0, $aCall[4])
-    If $aCall[4] < $iNumberOfBytesToRead Then
-        Switch $iMode
-            Case 0
-                Return SetExtended($aCall[4], StringLeft(DllStructGetData($tBuffer, 1), $aCall[4]))
-            Case 1
-                Return SetExtended($aCall[4], BinaryToString(BinaryMid(DllStructGetData($tBuffer, 1), 1, $aCall[4]), 4))
-            Case 2
-                Return SetExtended($aCall[4], BinaryMid(DllStructGetData($tBuffer, 1), 1, $aCall[4]))
-        EndSwitch
-    Else
-        Switch $iMode
-            Case 0, 2
-                Return SetExtended($aCall[4], DllStructGetData($tBuffer, 1))
-            Case 1
-                Return SetExtended($aCall[4], BinaryToString(DllStructGetData($tBuffer, 1), 4))
-        EndSwitch
-    EndIf
-EndFunc
+	__WinHttpDefault($iMode, 0)
+	__WinHttpDefault($iNumberOfBytesToRead, 8192)
+	__WinHttpDefault($vFunc, 0)
+	Local $tBuffer, $vOutOnError = ""
+	If $iMode = 2 Then $vOutOnError = Binary($vOutOnError)
+	Switch $iMode
+		Case 1, 2
+			If $pBuffer And $pBuffer <> Default Then
+				$tBuffer = DllStructCreate("byte[" & $iNumberOfBytesToRead & "]", $pBuffer)
+			Else
+				$tBuffer = DllStructCreate("byte[" & $iNumberOfBytesToRead & "]")
+			EndIf
+		Case Else
+			$iMode = 0
+			If $pBuffer And $pBuffer <> Default Then
+				$tBuffer = DllStructCreate("char[" & $iNumberOfBytesToRead & "]", $pBuffer)
+			Else
+				$tBuffer = DllStructCreate("char[" & $iNumberOfBytesToRead & "]")
+			EndIf
+	EndSwitch
+	Local $sReadType = "dword*"
+	If BitAND(_WinHttpQueryOption(_WinHttpQueryOption(_WinHttpQueryOption($hRequest, $WINHTTP_OPTION_PARENT_HANDLE), $WINHTTP_OPTION_PARENT_HANDLE), $WINHTTP_OPTION_CONTEXT_VALUE), $WINHTTP_FLAG_ASYNC) Then $sReadType = "ptr"
+	Local $aCall = DllCall($hWINHTTPDLL__WINHTTP, "bool", "WinHttpReadData", _
+			"handle", $hRequest, _
+			"struct*", $tBuffer, _
+			"dword", $iNumberOfBytesToRead, _
+			$sReadType, 0)
+	If @error Or Not $aCall[0] Then Return SetError(1, 0, "")
+	If Not $aCall[4] Then Return SetError(-1, 0, $vOutOnError)
+	If IsFunc($vFunc) Then $vFunc(0, $aCall[4])
+	If $aCall[4] < $iNumberOfBytesToRead Then
+		Switch $iMode
+			Case 0
+				Return SetExtended($aCall[4], StringLeft(DllStructGetData($tBuffer, 1), $aCall[4]))
+			Case 1
+				Return SetExtended($aCall[4], BinaryToString(BinaryMid(DllStructGetData($tBuffer, 1), 1, $aCall[4]), 4))
+			Case 2
+				Return SetExtended($aCall[4], BinaryMid(DllStructGetData($tBuffer, 1), 1, $aCall[4]))
+		EndSwitch
+	Else
+		Switch $iMode
+			Case 0, 2
+				Return SetExtended($aCall[4], DllStructGetData($tBuffer, 1))
+			Case 1
+				Return SetExtended($aCall[4], BinaryToString(DllStructGetData($tBuffer, 1), 4))
+		EndSwitch
+	EndIf
+EndFunc   ;==>_WinHttpReadData_Ex
+
