@@ -55,8 +55,9 @@ EndFunc   ;==>_StringLikeMath
 
 Global $debug = 0
 
-MsgBox(0, "", getCreamApiVersion())
-Exit
+Global $CAInstalledVersion=checkVersion()
+Global $CADir=@ScriptDir&"\CreamAPI "&$CAInstalledVersion&"\"
+MsgBox(0,"",$CADir)
 
 If FileExists("caconfig.ini") Then
 	$language = IniRead("caconfig.ini", "default", "language", "English")
@@ -310,14 +311,14 @@ Func exportCreamApi()
 			If FileExists($gameDir & "\steam_api_o.dll") == 0 Or FileExists($gameDir & "\steam_api64_o.dll") == 0 Then
 				If FileExists($gameDir & "\steam_api.dll") Then
 					FileMove($gameDir & "\steam_api.dll", $gameDir & "\steam_api_o.dll")
-					FileCopy(@ScriptDir & "\steam_api.dll", $gameDir & "\steam_api.dll")
+					FileCopy($CADir & "\nonlog_build\steam_api.dll", $gameDir & "\steam_api.dll")
 				EndIf
 				If FileExists($gameDir & "\steam_api64.dll") Then
 					FileMove($gameDir & "\steam_api64.dll", $gameDir & "\steam_api64_o.dll")
-					FileCopy(@ScriptDir & "\steam_api64.dll", $gameDir & "\steam_api64.dll")
+					FileCopy($CADir & "nonlog_build\steam_api64.dll", $gameDir & "\steam_api64.dll")
 				EndIf
 			EndIf
-			FileCopy(@ScriptDir & "\cream_api.ini", $gameDir & "\cream_api.ini")
+			FileCopy($CADir & "nonlog_build\cream_api.ini", $gameDir & "\cream_api.ini")
 			$creamApiPoint = $gameDir & "\cream_api.ini"
 		EndIf
 	Else
@@ -326,9 +327,9 @@ Func exportCreamApi()
 			$gameName = $aItem[3]
 			DirCreate($folderSave & "/" & $gameName)
 			$folderSave &= "/" & $gameName
-			FileCopy(@ScriptDir & "\cream_api.ini", $folderSave & "\cream_api.ini")
-			FileCopy(@ScriptDir & "\steam_api.dll", $folderSave & "\steam_api.dll")
-			FileCopy(@ScriptDir & "\steam_api64.dll", $folderSave & "\steam_api64.dll")
+			FileCopy($CADir & "\nonlog_build\cream_api.ini", $folderSave & "\cream_api.ini")
+			FileCopy($CADir & "\nonlog_build\steam_api.dll", $folderSave & "\steam_api.dll")
+			FileCopy($CADir & "\nonlog_build\steam_api64.dll", $folderSave & "\steam_api64.dll")
 			$creamApiPoint = $folderSave & "\cream_api.ini"
 		EndIf
 	EndIf
@@ -415,6 +416,7 @@ Func firstRun() ;This is useless, should be messed with checkVersion
 	EndIf
 EndFunc   ;==>firstRun
 
+;RETURN: vX.X.X.X/[space]XXXX		Everything after '/' is optional. Depending if hotfix
 Func getCreamApiVersion()
 	;;; Download cs.rin.ru page and read if version is the same.
 	$csrinruPage = _IECreate("https://cs.rin.ru/forum/viewtopic.php?f=29&t=70576", 0, 0, 1)
@@ -434,8 +436,10 @@ Func checkVersion()
 		EndIf
 	EndIf
 	Local $supportedVersion = FileRead(@AppDataDir & "/supportedVersionCA")
-	
+	FileDelete(@AppDataDir & "/supportedVersionCA")
 	Local $creamApiVersion = getCreamApiVersion()
+	;MsgBox(0,"","$supportedVersion: "&$supportedVersion)
+	;MsgBox(0,"","$creamApiVersion: "&$creamApiVersion)
 	If $creamApiVersion = "" Then
 		MsgBox(48, "Error", "It seems the application cannot connect to cs.rin.ru. Please verify your firewall and network connection. " & @CRLF & "If both are OK, you should try again later.", 0)
 		Exit
@@ -444,7 +448,7 @@ Func checkVersion()
 		If @error == 1 Or @error == 4 Then
 			ConsoleWrite("No version found!" & @CRLF)
 			updateCA()
-			Return [WE DID AN UPDATE]
+			Return $creamApiVersion
 		Else
 			If $caFolderEx[0] > 1 Then
 				Local $verFolder = $caFolderEx[$caFolderEx[0]]
@@ -454,7 +458,7 @@ Func checkVersion()
 		EndIf
 		Local $installedVersion = StringRegExp($verFolder, "CreamAPI (.*)", 1)[0]
 		If FileExists(@ScriptDir & "\CreamAPI " & $creamApiVersion) Then
-			Return [NO NEED To UPDATE]
+			Return 0
 		Else
 			If $installedVersion <> $creamApiVersion Then
 				If $creamApiVersion > $supportedVersion Then
@@ -464,13 +468,13 @@ Func checkVersion()
 					Switch $needToUp
 						Case 6 ;YES
 							updateCA()
-							Return [WE DID AN UPDATE]
-						Case 7 ;NO
-							Return [USER IS DUMB]
+							Return $creamApiVersion
+						Case 7 ;User is perfectly stupid
+							Return -1
 					EndSwitch
 				EndIf
 			Else ;No need to update
-				Return [NO NEED To UPDATE]
+				Return $creamApiVersion
 			EndIf
 		EndIf
 	EndIf
@@ -492,14 +496,36 @@ Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome 
 		EndSwitch
 	Else
 		$hConnect = _WinHttpConnect($hNetwork, "http://cs.rin.ru/")
-		; Specify the reguest
-		$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id=39093", Default, "", "*/*")
+		$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/viewtopic.php?p=1180852", Default, "", "*/*")
+		; Send request
+		_WinHttpSendRequest($hRequest)
+		; Wait for the response
+		_WinHttpReceiveResponse($hRequest)
+		
+		;See if there is data to read
+		Local $sChunk, $sData
+		If _WinHttpQueryDataAvailable($hRequest) Then
+			; Read
+			While 1
+				$sChunk = _WinHttpReadData($hRequest)
+				If @error Then ExitLoop
+				$sData &= $sChunk
+			WEnd
+		Else
+			MsgBox(48, "Error", "Site is experiencing problems.")
+		EndIf
+		$dlId=StringRegExp($sData, '<a href="\.\/download\/file\.php\?id=([0-9]*)">', 1)[0]
+		If Not @error Then
+			$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id="&$dlId, Default, "", "*/*")
+		Else
+			Exit
+		EndIf
 		; Send request
 		_WinHttpSendRequest($hRequest)
 		; Wait for the response
 		_WinHttpReceiveResponse($hRequest)
 		$sQueryHeader = _WinHttpQueryHeaders($hRequest)
-		ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
+		;ConsoleWrite(_WinHttpQueryHeaders($hRequest) & @CRLF)
 		$sFileName = _StringBetween2($sQueryHeader, "filename*=UTF-8''", "Strict-Transport-Security")
 		$sFileName = _StringLikeMath($sFileName, "-", StringRight($sFileName, 2))
 		GUISetState(@SW_SHOW, $dlForm)
@@ -518,22 +544,32 @@ Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome 
 		Else
 			;error o/
 		EndIf
-		$fExtract = StringRegExp(StringTrimRight("CreamAPI_Release_v3.0.0.3_Hotfix.7z", 3), "(.*)_Release_v(.*)", 1)
+		$fExtract = StringRegExp(StringTrimRight($sFileName, 3), "(.*)_Release_v(.*)", 1)
+		If StringInStr($fExtract[1],"_") Then
+			$fExtract[1]=StringReplace($fExtract[1],"_", " ")
+		EndIf
+		$fExtract[1]="v"&$fExtract[1]
 		$zipExtractDir = @ScriptDir & "\" & $fExtract[0] & " " & $fExtract[1]
+		;MsgBox(0,"",$zipExtractDir)
 		_Extract($sFileName, $zipExtractDir)
-		MsgBox(0, "", "End")
+		;MsgBox(0, "", "End")
 	EndIf
 EndFunc   ;==>updateCA
 
 Func _Extract($fileName, $outPutDir)
 	FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)
-	MsgBox(262144, 'Debug line ~' & @ScriptLineNumber, 'Selection:' & @LF & 'FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)' & @LF & @LF & 'Return:' & @LF & FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)) ;### Debug MSGBOX
+	;MsgBox(262144, 'Debug line ~' & @ScriptLineNumber, 'Selection:' & @LF & 'FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)' & @LF & @LF & 'Return:' & @LF & FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)) ;### Debug MSGBOX
 	If Not FileExists(@TempDir & "\7za.exe") Then
 		MsgBox(16, "Error!", "Cannot proceed to extraction. Aborting...", 0)
 		Exit
 	EndIf
-	RunWait(@TempDir & "\7za.exe x " & $fileName & '-o"' & $outPutDir & '"')
-	FileDelete(@TempDir & "\7za.exe")
+	$unzipOut=RunWait(@TempDir & "\7za.exe x " & $fileName & ' -o"' & $outPutDir & '" -y' )
+	If $unzipOut == 0 Then
+		FileDelete(@TempDir & "\7za.exe")
+	Else
+		MsgBox(0,"Error!","An error happened during the extraction. Please try again or contact me via forum")
+		Exit
+	EndIf
 EndFunc   ;==>_Extract
 
 Func __StringToHex($strChar)
@@ -562,7 +598,7 @@ Func logToCSRINRU($username, $password) ;return: If you logged correctly, return
 	$hOpen = _WinHttpOpen()
 	; Get connection handle
 	$hConnect = _WinHttpConnect($hOpen, "https://cs.rin.ru/", $INTERNET_DEFAULT_HTTPS_PORT)
-	MsgBox(0, "", $hConnect)
+	;MsgBox(0, "", $hConnect)
 	; Fill login form:
 	$sRead = _WinHttpSimpleFormFill($hConnect, _
 			"/forum/ucp.php?mode=login", _ ; location of the form
