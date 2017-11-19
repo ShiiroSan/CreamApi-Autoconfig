@@ -28,8 +28,8 @@
 #include <File.au3>
 #include <InetConstants.au3>
 #include <WinAPIFiles.au3>
-#include <ExtMsgBox.au3>
 #include <WinHttp.au3>
+#include <Console.au3>
 
 #Region GUI Includes
 #include "Forms/CreamApiConfigurator.isf"
@@ -55,9 +55,8 @@ EndFunc   ;==>_StringLikeMath
 
 Global $debug = 0
 
-Global $CAInstalledVersion=checkVersion()
-Global $CADir=@ScriptDir&"\CreamAPI "&$CAInstalledVersion&"\"
-MsgBox(0,"",$CADir)
+Global $CAInstalledVersion = checkVersion()
+Global $CADir = @ScriptDir & "\CreamAPI " & $CAInstalledVersion
 
 If FileExists("caconfig.ini") Then
 	$language = IniRead("caconfig.ini", "default", "language", "English")
@@ -112,34 +111,30 @@ While $configuratorShow
 	EndSwitch
 WEnd
 
-#Region ### Get Steam Path ###
-$baseDirSteam = RegRead("HKCU\Software\Valve\Steam\", "SteamPath")
-$confSteamFile = FileOpen($baseDirSteam & "\config\config.vdf")
-$confFileRead = FileRead($confSteamFile)
-$line9clear = _StringBetween2($confFileRead, '"BaseInstallFolder_1"		', '				"SentryFile"')
-$line9clear = StringRegExpReplace($line9clear, "\\\\", "\\")
-$line9clear = StringRegExpReplace($line9clear, "\""", "")
-$line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
-$defaultGameFolder = $line9clear & "\SteamApps\common\"
-$gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
-#EndRegion ### Get Steam Path ###
-
-If $gameDir == "" Then
+Cout("Do you want to use an already installed game? [Y/n]" & @CRLF)
+$answer = Getch()
+If StringLower($answer) = "n" Then
+	$gameDir = ""
 	$noGame = True
 Else
-	$noGame = False
-EndIf
-If Not $noGame Then
+	#Region ### Get Steam Path ###
+	$baseDirSteam = RegRead("HKCU\Software\Valve\Steam\", "SteamPath")
+	$confSteamFile = FileOpen($baseDirSteam & "\config\config.vdf")
+	$confFileRead = FileRead($confSteamFile)
+	$line9clear = _StringBetween2($confFileRead, '"BaseInstallFolder_1"		', '				"SentryFile"')
+	$line9clear = StringRegExpReplace($line9clear, "\\\\", "\\")
+	$line9clear = StringRegExpReplace($line9clear, "\""", "")
+	$line9clear = StringLeft($line9clear, StringLen($line9clear) - 1)
+	$defaultGameFolder = $line9clear & "\SteamApps\common\"
+	$gameDir = FileSelectFolder("Directory of the game", $defaultGameFolder, 0)
+	#EndRegion ### Get Steam Path ###
 	$ARRfullDirWGameName = StringSplit($gameDir, "\")
 	$guessGameName = $ARRfullDirWGameName[$ARRfullDirWGameName[0]]
+	GUICtrlSetData($gameNameInput, $guessGameName)
+	$noGame = False
 EndIf
 
 #Region ### START Koda GUI section ### Form=$searchForm
-If Not $noGame Then
-	GUICtrlSetData($gameNameInput, $guessGameName)
-Else
-	;Nothing to do otherwise idiot.
-EndIf
 GUISetState(@SW_SHOW, $searchForm)
 #EndRegion ### END Koda GUI section ###
 
@@ -172,6 +167,7 @@ Func __fnDLCGet($DLCUrl) ;**** INTERNAL ONLY ****
 	$qTest = _IECreate($DLCUrl, 0, 0)
 	$qText = _IEBodyReadText($qTest)
 	If Not StringInStr($qText, "DLCs") Then
+		FileWrite("out.out",$qText)
 		MsgBox(0, "Error!", "The game you looked for does not have DLCs.")
 		_IEQuit($qTest)
 		Exit
@@ -221,10 +217,14 @@ While 1
 								For $i = 1 To UBound($aTableData, 1) - 1 Step 1 ;this whole part is needed to get only game on multi-game search
 									If $aTableData[$i][1] <> "Game" Then
 										$iToDel += 1
-										If $iToDel > 1 Then $posToDelete = $posToDelete & ";"
+										If $iToDel > 1 And $iToDel < UBound($aTableData, 1) - 1 Then
+											$posToDelete = $posToDelete & ";"
+										EndIf
 										$posToDelete = $posToDelete & $i
 									EndIf
 								Next
+								_ArrayDelete($aTableData,$posToDelete)
+								_ArrayDisplay($aTableData)
 								_GUICtrlListView_InsertColumn($g_hListView, 0, $aTableData[0][0], 75)
 								_GUICtrlListView_InsertColumn($g_hListView, 1, $aTableData[0][1], 75)
 								_GUICtrlListView_InsertColumn($g_hListView, 2, $aTableData[0][2], 200)
@@ -291,9 +291,26 @@ Func _StringBetween2($s, $from, $to)
 EndFunc   ;==>_StringBetween2
 
 Func exportCreamApi()
+	Cout("Do you want to use the log build? [y/N]" & @CRLF)
+	Cout("If the game crash, try with nonlog build." & @CRLF)
+	$logbuild = Getch()
+	MsgBox(0,"",$logbuild)
+	If StringLower($logbuild) == "y" Then
+		$CADir &= "\log_build"
+	Else
+		$CADir &= "\nonlog_build"
+	EndIf
 	If $debug Then MsgBox(0, "", "Hey! You're in debug so don't expect it to save the cracked files kiddo")
 	If Not $noGame Then
-		If Not FileExists($gameDir & "\steam_api.dll") Or Not FileExists($gameDir & "\steam_api64.dll") Then
+		MsgBox(0,"",FileExists($gameDir & "\steam_api.dll"))
+		Local $isAnySteamAPI=0
+		If FileExists($gameDir & "\steam_api.dll") Then
+			$isAnySteamAPI+=1
+		EndIf
+		If FileExists($gameDir & "\steam_api64.dll") Then
+			$isAnySteamAPI+=2
+		EndIf
+		If Not $isAnySteamAPI Then
 			MsgBox(0, "Error!", "Sorry, steam_api(64).dll can't be found... Will now open a file selection to know where to search for it.")
 			$newGameDir = FileOpenDialog("Specify folder of steamapi(64).dll", $gameDir, "Steamapi DLL (steam_api.dll;steam_api64.dll)")
 			$isOkFor86DLL = StringRegExp($newGameDir, "steam_api.dll")
@@ -311,14 +328,14 @@ Func exportCreamApi()
 			If FileExists($gameDir & "\steam_api_o.dll") == 0 Or FileExists($gameDir & "\steam_api64_o.dll") == 0 Then
 				If FileExists($gameDir & "\steam_api.dll") Then
 					FileMove($gameDir & "\steam_api.dll", $gameDir & "\steam_api_o.dll")
-					FileCopy($CADir & "\nonlog_build\steam_api.dll", $gameDir & "\steam_api.dll")
+					FileCopy($CADir & "\steam_api.dll", $gameDir & "\steam_api.dll")
 				EndIf
 				If FileExists($gameDir & "\steam_api64.dll") Then
 					FileMove($gameDir & "\steam_api64.dll", $gameDir & "\steam_api64_o.dll")
-					FileCopy($CADir & "nonlog_build\steam_api64.dll", $gameDir & "\steam_api64.dll")
+					FileCopy($CADir & "\steam_api64.dll", $gameDir & "\steam_api64.dll")
 				EndIf
 			EndIf
-			FileCopy($CADir & "nonlog_build\cream_api.ini", $gameDir & "\cream_api.ini")
+			FileCopy($CADir & "\cream_api.ini", $gameDir & "\cream_api.ini")
 			$creamApiPoint = $gameDir & "\cream_api.ini"
 		EndIf
 	Else
@@ -327,9 +344,9 @@ Func exportCreamApi()
 			$gameName = $aItem[3]
 			DirCreate($folderSave & "/" & $gameName)
 			$folderSave &= "/" & $gameName
-			FileCopy($CADir & "\nonlog_build\cream_api.ini", $folderSave & "\cream_api.ini")
-			FileCopy($CADir & "\nonlog_build\steam_api.dll", $folderSave & "\steam_api.dll")
-			FileCopy($CADir & "\nonlog_build\steam_api64.dll", $folderSave & "\steam_api64.dll")
+			FileCopy($CADir & "\cream_api.ini", $folderSave & "\cream_api.ini")
+			FileCopy($CADir & "\steam_api.dll", $folderSave & "\steam_api.dll")
+			FileCopy($CADir & "\steam_api64.dll", $folderSave & "\steam_api64.dll")
 			$creamApiPoint = $folderSave & "\cream_api.ini"
 		EndIf
 	EndIf
@@ -361,7 +378,11 @@ Func exportCreamApi()
 	If Not $debug Then
 		IniWrite($creamApiPoint, "steam", "appid", " " + $aItem[1])
 		IniWrite($creamApiPoint, "steam", "unlockall", " true")
-		IniWrite($creamApiPoint, "steam", "log", " false") ;If this value is true, near to all game crash so we'll just turn it off :D
+		If StringLower($logbuild) == "y" Then
+			IniWrite($creamApiPoint, "steam", "log", " true") ;If this value is true, near to all game crash
+		Else
+			IniWrite($creamApiPoint, "steam", "log", " false") ;If this value is true, near to all game crash
+		EndIf
 		$dlcnum = -1
 		For $i = 1 To UBound($DLCData) Step 1
 			If $DLCData[$i][0] <> "" Then
@@ -399,23 +420,6 @@ Func exportCreamApi()
 			 & "Made by ShiiroSan & Anomaly for cs.rin.ru communities. Thanks to deadmau5 for CreamAPI.")
 EndFunc   ;==>exportCreamApi
 
-Func firstRun() ;This is useless, should be messed with checkVersion
-	Local $creamApiVersion = getCreamApiVersion()
-	InetGet("https://www.shiirosan.com/caversion", @AppDataDir & "/supportedVersionCA")
-	Local $supportedVersion = FileRead(@AppDataDir & "/supportedVersionCA")
-	If $creamApiVersion <> $supportedVersion Then
-		If $creamApiVersion > $supportedVersion Then
-			$needToUp = MsgBox(68, "Info", "The new version isn't officially supported for the moment." & @CRLF & "You might report it to ShiiroSan on cs.rin.ru, or wait a few days." & @CRLF & "" & @CRLF & "However, we could always try to use the new version with old parameter [CAN BE VERY UNSTABLE AND BREAK YOUR GAME]. " & @CRLF & "Do you want to try?", 0)
-			Switch $needToUp
-				Case 6 ;YES
-					
-				Case 7 ;NO
-					
-			EndSwitch
-		EndIf
-	EndIf
-EndFunc   ;==>firstRun
-
 ;RETURN: vX.X.X.X/[space]XXXX		Everything after '/' is optional. Depending if hotfix
 Func getCreamApiVersion()
 	;;; Download cs.rin.ru page and read if version is the same.
@@ -427,14 +431,6 @@ Func getCreamApiVersion()
 EndFunc   ;==>getCreamApiVersion
 
 Func checkVersion()
-	$shiiroNetStatus = InetGet("https://www.shiirosan.com/caversion", @AppDataDir & "/supportedVersionCA")
-	If Not $shiiroNetStatus Then
-		;Here we are in the case were there is no connection to shiirosan.com
-		If Not FileExists(@AppDataDir & "/supportedVersionCA") Then
-			MsgBox(48, "Error", "It seems the application cannot connect to www.shiirosan.com. Please verify your firewall and network connection. " & @CRLF & "If both are OK, you should try again later.", 0)
-			Exit
-		EndIf
-	EndIf
 	Local $supportedVersion = FileRead(@AppDataDir & "/supportedVersionCA")
 	FileDelete(@AppDataDir & "/supportedVersionCA")
 	Local $creamApiVersion = getCreamApiVersion()
@@ -458,8 +454,16 @@ Func checkVersion()
 		EndIf
 		Local $installedVersion = StringRegExp($verFolder, "CreamAPI (.*)", 1)[0]
 		If FileExists(@ScriptDir & "\CreamAPI " & $creamApiVersion) Then
-			Return 0
+			Return $creamApiVersion
 		Else
+			$shiiroNetStatus = InetGet("https://www.shiirosan.com/caversion", @AppDataDir & "/supportedVersionCA")
+			If Not $shiiroNetStatus Then
+				;Here we are in the case were there is no connection to shiirosan.com
+				If Not FileExists(@AppDataDir & "/supportedVersionCA") Then
+					MsgBox(48, "Error", "It seems the application cannot connect to www.shiirosan.com. Please verify your firewall and network connection. " & @CRLF & "If both are OK, you should try again later.", 0)
+					Exit
+				EndIf
+			EndIf
 			If $installedVersion <> $creamApiVersion Then
 				If $creamApiVersion > $supportedVersion Then
 					;ask the user if he wants to take to risk to fucked up his game o/
@@ -514,9 +518,9 @@ Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome 
 		Else
 			MsgBox(48, "Error", "Site is experiencing problems.")
 		EndIf
-		$dlId=StringRegExp($sData, '<a href="\.\/download\/file\.php\?id=([0-9]*)">', 1)[0]
+		$dlId = StringRegExp($sData, '<a href="\.\/download\/file\.php\?id=([0-9]*)">', 1)[0]
 		If Not @error Then
-			$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id="&$dlId, Default, "", "*/*")
+			$hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/download/file.php?id=" & $dlId, Default, "", "*/*")
 		Else
 			Exit
 		EndIf
@@ -545,10 +549,10 @@ Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome 
 			;error o/
 		EndIf
 		$fExtract = StringRegExp(StringTrimRight($sFileName, 3), "(.*)_Release_v(.*)", 1)
-		If StringInStr($fExtract[1],"_") Then
-			$fExtract[1]=StringReplace($fExtract[1],"_", " ")
+		If StringInStr($fExtract[1], "_") Then
+			$fExtract[1] = StringReplace($fExtract[1], "_", " ")
 		EndIf
-		$fExtract[1]="v"&$fExtract[1]
+		$fExtract[1] = "v" & $fExtract[1]
 		$zipExtractDir = @ScriptDir & "\" & $fExtract[0] & " " & $fExtract[1]
 		;MsgBox(0,"",$zipExtractDir)
 		_Extract($sFileName, $zipExtractDir)
@@ -557,17 +561,17 @@ Func updateCA() ;Thanks to user2530266 on StackOverflow who provided an awesome 
 EndFunc   ;==>updateCA
 
 Func _Extract($fileName, $outPutDir)
-	FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)
+	FileInstall(@ScriptDir & "\7za.exe", @TempDir & "\7za.exe", 1)
 	;MsgBox(262144, 'Debug line ~' & @ScriptLineNumber, 'Selection:' & @LF & 'FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)' & @LF & @LF & 'Return:' & @LF & FileInstall("C:\Users\CVDB5085\Desktop\Prog\creamapi-autoconfig\7za.exe", @TempDir & "\7za.exe", 1)) ;### Debug MSGBOX
 	If Not FileExists(@TempDir & "\7za.exe") Then
 		MsgBox(16, "Error!", "Cannot proceed to extraction. Aborting...", 0)
 		Exit
 	EndIf
-	$unzipOut=RunWait(@TempDir & "\7za.exe x " & $fileName & ' -o"' & $outPutDir & '" -y' )
+	$unzipOut = RunWait(@TempDir & "\7za.exe x " & $fileName & ' -o"' & $outPutDir & '" -y')
 	If $unzipOut == 0 Then
 		FileDelete(@TempDir & "\7za.exe")
 	Else
-		MsgBox(0,"Error!","An error happened during the extraction. Please try again or contact me via forum")
+		MsgBox(0, "Error!", "An error happened during the extraction. Please try again or contact me via forum")
 		Exit
 	EndIf
 EndFunc   ;==>_Extract
