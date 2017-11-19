@@ -1,35 +1,67 @@
-#include <Array.au3>
+#include <WinHttp.au3>
 
-Local $aArray[5] = [0, 1, 2, 3, 4]
+Opt("MustDeclareVars", 1)
 
-_ArrayDisplay($aArray, "Original")
-_ArrayDelete($aArray, 2)
-_ArrayDisplay($aArray, "Element 2 deleted")
+; Initialize
+Global $hOpen = _WinHttpOpen()
 
-Local $aArray_Base[25][4]
-For $i = 0 To 24
-	For $j = 0 To 3
-		$aArray_Base[$i][$j] = $i & "-" & $j
-	Next
-Next
+If @error Then
+    MsgBox(48, "Error", "Error initializing the usage of WinHTTP functions.")
+    Exit 1
+EndIf
 
-; Single row
-$aArray = $aArray_Base
-_ArrayDisplay($aArray, "BEFORE deletion")
-_ArrayDelete($aArray, 7)
-_ArrayDisplay($aArray, "SINGLE ROW deleted")
+; Specify what to connect to
+Global $hConnect = _WinHttpConnect($hOpen, "yahoo.com") ; <- yours here
+If @error Then
+    MsgBox(48, "Error", "Error specifying the initial target server of an HTTP request.")
+    _WinHttpCloseHandle($hOpen)
+    Exit 2
+EndIf
 
-; Range string
-$aArray = $aArray_Base
-Local $sRange = "0;11;12;13;14;15;24"
-_ArrayDisplay($aArray, "BEFORE deletion")
-_ArrayDelete($aArray, $sRange)
-ConsoleWrite(" " & @error & @CRLF)
-_ArrayDisplay($aArray, "RANGE STRING deleted")
+; Create request
+Global $hRequest = _WinHttpOpenRequest($hConnect)
+If @error Then
+    MsgBox(48, "Error", "Error creating an HTTP request handle.")
+    _WinHttpCloseHandle($hConnect)
+    _WinHttpCloseHandle($hOpen)
+    Exit 3
+EndIf
 
-; 1D array
-$aArray = $aArray_Base
-Local $aDel[4] = [3, 5, 11, 13]
-_ArrayDisplay($aArray, "BEFORE deletion")
-_ArrayDelete($aArray, $aDel)
-_ArrayDisplay($aArray, "RANGE ARRAY deleted")
+; Send it
+_WinHttpSendRequest($hRequest)
+If @error Then
+    MsgBox(48, "Error", "Error sending specified request.")
+    _WinHttpCloseHandle($hRequest)
+    _WinHttpCloseHandle($hConnect)
+    _WinHttpCloseHandle($hOpen)
+    Exit 4
+EndIf
+
+; Wait for the response
+_WinHttpReceiveResponse($hRequest)
+If @error Then
+    MsgBox(48, "Error", "Error waiting for the response from the server.")
+    _WinHttpCloseHandle($hRequest)
+    _WinHttpCloseHandle($hConnect)
+    _WinHttpCloseHandle($hOpen)
+    Exit 5
+EndIf
+
+; See if there is data to read
+Global $sChunk, $sData
+If _WinHttpQueryDataAvailable($hRequest) Then
+    ; Read
+    While 1
+        $sChunk = _WinHttpReadData($hRequest)
+        If @error Then ExitLoop
+        $sData &= $sChunk
+    WEnd
+    ConsoleWrite($sData & @CRLF) ; print to console
+Else
+    MsgBox(48, "Error", "Site is experiencing problems.")
+EndIf
+
+; Close handles when they are not needed any more
+_WinHttpCloseHandle($hRequest)
+_WinHttpCloseHandle($hConnect)
+_WinHttpCloseHandle($hOpen)

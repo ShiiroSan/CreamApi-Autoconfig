@@ -167,7 +167,7 @@ Func __fnDLCGet($DLCUrl) ;**** INTERNAL ONLY ****
 	$qTest = _IECreate($DLCUrl, 0, 0)
 	$qText = _IEBodyReadText($qTest)
 	If Not StringInStr($qText, "DLCs") Then
-		FileWrite("out.out",$qText)
+		FileWrite("out.out", $qText)
 		MsgBox(0, "Error!", "The game you looked for does not have DLCs.")
 		_IEQuit($qTest)
 		Exit
@@ -223,7 +223,7 @@ While 1
 										$posToDelete = $posToDelete & $i
 									EndIf
 								Next
-								_ArrayDelete($aTableData,$posToDelete)
+								_ArrayDelete($aTableData, $posToDelete)
 								_ArrayDisplay($aTableData)
 								_GUICtrlListView_InsertColumn($g_hListView, 0, $aTableData[0][0], 75)
 								_GUICtrlListView_InsertColumn($g_hListView, 1, $aTableData[0][1], 75)
@@ -294,7 +294,7 @@ Func exportCreamApi()
 	Cout("Do you want to use the log build? [y/N]" & @CRLF)
 	Cout("If the game crash, try with nonlog build." & @CRLF)
 	$logbuild = Getch()
-	MsgBox(0,"",$logbuild)
+	MsgBox(0, "", $logbuild)
 	If StringLower($logbuild) == "y" Then
 		$CADir &= "\log_build"
 	Else
@@ -302,13 +302,13 @@ Func exportCreamApi()
 	EndIf
 	If $debug Then MsgBox(0, "", "Hey! You're in debug so don't expect it to save the cracked files kiddo")
 	If Not $noGame Then
-		MsgBox(0,"",FileExists($gameDir & "\steam_api.dll"))
-		Local $isAnySteamAPI=0
+		MsgBox(0, "", FileExists($gameDir & "\steam_api.dll"))
+		Local $isAnySteamAPI = 0
 		If FileExists($gameDir & "\steam_api.dll") Then
-			$isAnySteamAPI+=1
+			$isAnySteamAPI += 1
 		EndIf
 		If FileExists($gameDir & "\steam_api64.dll") Then
-			$isAnySteamAPI+=2
+			$isAnySteamAPI += 2
 		EndIf
 		If Not $isAnySteamAPI Then
 			MsgBox(0, "Error!", "Sorry, steam_api(64).dll can't be found... Will now open a file selection to know where to search for it.")
@@ -419,6 +419,36 @@ Func exportCreamApi()
 	MsgBox(0, "Done!", "cream_api.ini is done." & @CR _
 			 & "Made by ShiiroSan & Anomaly for cs.rin.ru communities. Thanks to deadmau5 for CreamAPI.")
 EndFunc   ;==>exportCreamApi
+
+Func getPage($URLToRead)
+	Local $hOpen = _WinHttpOpen()
+	
+	Local $hConnect = _WinHttpConnect($hOpen, "http://cs.rin.ru/")
+	Local $hRequest = _WinHttpOpenRequest($hConnect, Default, "/forum/viewtopic.php?p=1180852", Default, "", "*/*")
+	; Send request
+	_WinHttpSendRequest($hRequest)
+	; Wait for the response
+	_WinHttpReceiveResponse($hRequest)
+	
+	;See if there is data to read
+	Local $sChunk, $sData
+	If _WinHttpQueryDataAvailable($hRequest) Then
+		; Read
+		While 1
+			$sChunk = _WinHttpReadData($hRequest)
+			If @error Then ExitLoop
+			$sData &= $sChunk
+		WEnd
+	Else
+		MsgBox(48, "Error", "Site is experiencing problems.")
+	EndIf
+	; /* IM CODING HERE
+	; 	 MUSTARD OUTPUT OF THE FUNCTION
+	; */
+	_WinHttpCloseHandle($hRequest)
+	_WinHttpCloseHandle($hConnect)
+	_WinHttpCloseHandle($hOpen)
+EndFunc   ;==>getPage
 
 ;RETURN: vX.X.X.X/[space]XXXX		Everything after '/' is optional. Depending if hotfix
 Func getCreamApiVersion()
